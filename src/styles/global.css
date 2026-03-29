@@ -11,6 +11,8 @@
 
 @layer base {
   :root {
+    /* General-purpose design tokens — use var(--font-sans) / var(--font-mono) in custom CSS.
+       Tailwind font-family is configured separately in tailwind.config.mjs. */
     --font-sans: 'Inter Variable', sans-serif;
     --font-mono: 'Geist Mono', monospace;
   }
