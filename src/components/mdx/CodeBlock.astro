@@ -44,17 +44,40 @@ const { class: className, 'data-language': lang, ...rest } = Astro.props;
     btn.addEventListener('click', async () => {
       const pre = btn.nextElementSibling as HTMLPreElement;
       const code = pre?.querySelector('code')?.innerText ?? '';
-      await navigator.clipboard.writeText(code);
 
       const copyIcon = btn.querySelector<SVGElement>('.copy-icon')!;
       const checkIcon = btn.querySelector<SVGElement>('.check-icon')!;
-      copyIcon.classList.add('hidden');
-      checkIcon.classList.remove('hidden');
 
-      setTimeout(() => {
-        copyIcon.classList.remove('hidden');
-        checkIcon.classList.add('hidden');
-      }, 2000);
+      try {
+        await navigator.clipboard.writeText(code);
+        copyIcon.classList.add('hidden');
+        checkIcon.classList.remove('hidden');
+        setTimeout(() => {
+          copyIcon.classList.remove('hidden');
+          checkIcon.classList.add('hidden');
+        }, 2000);
+      } catch {
+        // Clipboard API unavailable (HTTP context or permission denied)
+        // Fallback: briefly show check anyway if we got here via execCommand
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = code;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          copyIcon.classList.add('hidden');
+          checkIcon.classList.remove('hidden');
+          setTimeout(() => {
+            copyIcon.classList.remove('hidden');
+            checkIcon.classList.add('hidden');
+          }, 2000);
+        } catch {
+          // Both methods failed — do nothing, icon stays in copy state
+        }
+      }
     });
   });
 </script>
