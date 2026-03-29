@@ -7,6 +7,7 @@ import mdx from '@astrojs/mdx';
 import rehypeShiki from '@shikijs/rehype';
 
 export default defineConfig({
+  site: 'https://afnizanfaizal.com',
   integrations: [
     tailwind({ applyBaseStyles: false }),
     react(),
