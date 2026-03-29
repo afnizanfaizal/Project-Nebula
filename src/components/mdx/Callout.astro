@@ -1,0 +1,29 @@
+---
+// src/components/mdx/Callout.astro
+interface Props {
+  type?: 'info' | 'tip' | 'warning' | 'danger';
+  title?: string;
+}
+
+const { type = 'info', title } = Astro.props;
+
+const config = {
+  info:    { icon: 'ℹ', bg: 'bg-blue-50/50   dark:bg-blue-950/30',  border: 'border-blue-200   dark:border-blue-800/50',  text: 'text-blue-900   dark:text-blue-100'  },
+  tip:     { icon: '✦', bg: 'bg-green-50/50  dark:bg-green-950/30', border: 'border-green-200  dark:border-green-800/50', text: 'text-green-900  dark:text-green-100' },
+  warning: { icon: '⚠', bg: 'bg-amber-50/50  dark:bg-amber-950/30', border: 'border-amber-200  dark:border-amber-800/50', text: 'text-amber-900  dark:text-amber-100' },
+  danger:  { icon: '✕', bg: 'bg-red-50/50    dark:bg-red-950/30',   border: 'border-red-200    dark:border-red-800/50',   text: 'text-red-900    dark:text-red-100'   },
+};
+
+const { icon, bg, border, text } = config[type];
+---
+<div class={`not-prose my-6 flex gap-3 rounded-lg border p-4 backdrop-blur-sm ${bg} ${border}`}>
+  <span class={`mt-0.5 shrink-0 text-base leading-none ${text}`} aria-hidden="true">{icon}</span>
+  <div class="flex-1 min-w-0">
+    {title && (
+      <p class={`mb-1 text-sm font-semibold ${text}`}>{title}</p>
+    )}
+    <div class={`text-sm leading-relaxed ${text} [&>p]:m-0`}>
+      <slot />
+    </div>
+  </div>
+</div>
