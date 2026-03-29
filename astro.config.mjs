@@ -3,10 +3,10 @@ import { defineConfig } from 'astro/config';
 import tailwind from '@astrojs/tailwind';
 import react from '@astrojs/react';
 import mdx from '@astrojs/mdx';
+// @shikijs/rehype v4 only exports rehypeShiki as default, not as a named export
 import rehypeShiki from '@shikijs/rehype';
 
 export default defineConfig({
-  output: 'server',
   integrations: [
     tailwind({ applyBaseStyles: false }),
     react(),
