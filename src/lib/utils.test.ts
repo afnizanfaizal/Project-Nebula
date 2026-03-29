@@ -12,6 +12,11 @@ describe('getReadingTime', () => {
     expect(getReadingTime(text)).toBe(1);
   });
 
+  it('returns 1 for exactly 200 words', () => {
+    const text = 'word '.repeat(200);
+    expect(getReadingTime(text)).toBe(1);
+  });
+
   it('returns 2 for 201-400 words', () => {
     const text = 'word '.repeat(250);
     expect(getReadingTime(text)).toBe(2);
