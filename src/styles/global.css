@@ -52,4 +52,10 @@
   .font-mono {
     font-feature-settings: 'liga' 0, 'calt' 0;
   }
+
+  /* TableOfContents active link — toggled by IntersectionObserver in TableOfContents.astro.
+     Using a CSS class instead of Tailwind dynamic classes so JIT generates the dark: variant. */
+  .toc-link--active {
+    @apply font-medium text-zinc-900 dark:text-zinc-100;
+  }
 }

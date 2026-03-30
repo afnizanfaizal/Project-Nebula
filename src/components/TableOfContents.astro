@@ -18,7 +18,7 @@ const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
     <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-600">
       On this page
     </p>
-    <ol class="space-y-1.5 text-sm">
+    <ul class="space-y-1.5 text-sm">
       {toc.map((heading) => (
         <li class={heading.depth === 3 ? 'pl-3' : ''}>
           <a
@@ -29,7 +29,7 @@ const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
           </a>
         </li>
       ))}
-    </ol>
+    </ul>
   </nav>
 )}
 
@@ -42,9 +42,9 @@ const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
     (entries) => {
       for (const entry of entries) {
         if (entry.isIntersecting) {
-          links.forEach((l) => l.classList.remove('text-zinc-900', 'dark:text-zinc-100', 'font-medium'));
+          links.forEach((l) => l.classList.remove('toc-link--active'));
           const active = document.querySelector<HTMLAnchorElement>(`.toc-link[href="#${entry.target.id}"]`);
-          active?.classList.add('text-zinc-900', 'dark:text-zinc-100', 'font-medium');
+          active?.classList.add('toc-link--active');
         }
       }
     },
