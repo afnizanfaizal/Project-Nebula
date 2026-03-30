@@ -2,8 +2,9 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { writeFile, mkdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import matter from 'gray-matter';
+import { Timestamp } from 'firebase-admin/firestore';
+import { savePost } from '../../lib/firebase-admin.js';
 
 function titleToSlug(title: string): string {
   return title
@@ -14,24 +15,10 @@ function titleToSlug(title: string): string {
     .replace(/-+/g, '-');
 }
 
-function extractTitle(markdown: string): string {
-  const match = markdown.match(/^title:\s*["']?(.+?)["']?\s*$/m);
-  return match ? match[1] : 'untitled';
-}
-
 export const POST: APIRoute = async (context) => {
   const { request } = context;
 
-  if (import.meta.env.PROD) {
-    return new Response(JSON.stringify({ error: 'Not available in production' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  // Verify admin session even in dev
-  const sessionCookie = context.cookies.get('admin_session');
-  if (sessionCookie?.value !== 'authenticated') {
+  if (context.cookies.get('admin_session')?.value !== 'authenticated') {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
@@ -47,19 +34,36 @@ export const POST: APIRoute = async (context) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    // Use explicit slug from editor if valid, otherwise derive from frontmatter title
+
+    const { data, content } = matter(markdown);
+
     const explicitSlug =
       typeof body.slug === 'string' && /^[a-z0-9][a-z0-9-]*$/.test(body.slug)
         ? body.slug
         : null;
-    const slug = explicitSlug ?? titleToSlug(extractTitle(markdown));
-    const filename = `${slug}.mdx`;
-    const dir = join(process.cwd(), 'src', 'content', 'blog');
+    const slug = explicitSlug ?? titleToSlug(String(data.title ?? 'untitled'));
 
-    await mkdir(dir, { recursive: true });
-    await writeFile(join(dir, filename), markdown, 'utf-8');
+    const pubDate = data.pubDate
+      ? Timestamp.fromDate(new Date(data.pubDate as string))
+      : Timestamp.now();
 
-    return new Response(JSON.stringify({ ok: true, filename }), {
+    const updatedDate = data.updatedDate
+      ? Timestamp.fromDate(new Date(data.updatedDate as string))
+      : undefined;
+
+    await savePost(slug, {
+      title:         String(data.title ?? ''),
+      description:   String(data.description ?? ''),
+      pubDate,
+      ...(updatedDate ? { updatedDate } : {}),
+      tags:          Array.isArray(data.tags) ? data.tags.map(String) : [],
+      draft:         Boolean(data.draft ?? false),
+      featured:      Boolean(data.featured ?? false),
+      ...(data.featuredImage ? { featuredImage: String(data.featuredImage) } : {}),
+      content:       content.trimStart(),
+    });
+
+    return new Response(JSON.stringify({ ok: true, slug }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
