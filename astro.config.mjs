@@ -18,6 +18,13 @@ export default defineConfig({
     react(),
     mdx(),
   ],
+  vite: {
+    ssr: {
+      // Firebase ESM modules use browser-specific constructs (import.meta, etc.)
+      // that Vite must bundle rather than externalize for SSR to work correctly.
+      noExternal: ['firebase', '@firebase/app', '@firebase/firestore', '@firebase/util', '@firebase/component', '@firebase/logger'],
+    },
+  },
   markdown: {
     syntaxHighlight: false,
     rehypePlugins: [
