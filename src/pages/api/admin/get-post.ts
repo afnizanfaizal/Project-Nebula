@@ -1,10 +1,16 @@
 // src/pages/api/admin/get-post.ts
-// Returns raw MDX file content for the editor to load existing posts
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { getPost } from '../../../lib/firebase-admin.js';
+import { Timestamp } from 'firebase-admin/firestore';
+
+function formatDate(ts: Timestamp | undefined): string | undefined {
+  if (!ts) return undefined;
+  return ts instanceof Timestamp
+    ? ts.toDate().toISOString().slice(0, 10)
+    : String(ts);
+}
 
 export const GET: APIRoute = async ({ url, cookies }) => {
   if (cookies.get('admin_session')?.value !== 'authenticated') {
@@ -22,22 +28,40 @@ export const GET: APIRoute = async ({ url, cookies }) => {
     });
   }
 
-  const base = join(process.cwd(), 'src', 'content', 'blog');
-
-  for (const ext of ['.mdx', '.md']) {
-    try {
-      const content = await readFile(join(base, `${slug}${ext}`), 'utf-8');
-      return new Response(JSON.stringify({ content, slug }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    } catch {
-      // try next extension
-    }
+  const post = await getPost(slug);
+  if (!post) {
+    return new Response(JSON.stringify({ error: 'Post not found' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
-  return new Response(JSON.stringify({ error: 'Post not found' }), {
-    status: 404,
-    headers: { 'Content-Type': 'application/json' },
+  // Reconstruct the MDX frontmatter string for the editor
+  const pubDateStr     = formatDate(post.pubDate) ?? new Date().toISOString().slice(0, 10);
+  const updatedDateStr = formatDate(post.updatedDate);
+
+  const lines = [
+    '---',
+    `title: ${JSON.stringify(post.title)}`,
+    `pubDate: ${pubDateStr}`,
+    `description: ${JSON.stringify(post.description ?? '')}`,
+    `tags: ${JSON.stringify(post.tags ?? [])}`,
+    `featured: ${post.featured ?? false}`,
+    `draft: ${post.draft ?? false}`,
+    ...(post.featuredImage ? [`featuredImage: ${JSON.stringify(post.featuredImage)}`] : []),
+    ...(updatedDateStr     ? [`updatedDate: ${updatedDateStr}`]                       : []),
+    '---',
+    '',
+    post.content ?? '',
+  ];
+
+  const content = lines.join('\n');
+
+  return new Response(JSON.stringify({ content, slug }), {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store',
+    },
   });
 };
