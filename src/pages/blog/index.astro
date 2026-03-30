@@ -1,0 +1,42 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+
+const posts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+---
+<Layout title="Blog — Dr. Afnizanfaizal" description="Thoughts on AI, systems, and technology.">
+  <div class="mx-auto max-w-3xl px-6 py-16">
+    <h1 class="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 mb-2">Blog</h1>
+    <p class="text-zinc-500 dark:text-zinc-400 mb-12">
+      Writing on AI, systems design, and technology leadership.
+    </p>
+
+    <div class="space-y-px">
+      {posts.map((post) => {
+        const slug = post.id.replace(/\.mdx?$/, '');
+        return (
+          <a
+            href={`/blog/${slug}`}
+            class="group flex items-baseline justify-between gap-4 py-4 border-b border-zinc-100 dark:border-zinc-900 hover:border-zinc-200 dark:hover:border-zinc-800 transition-colors"
+          >
+            <div>
+              <h2 class="text-base font-medium text-zinc-900 dark:text-zinc-100 group-hover:text-zinc-600 dark:group-hover:text-zinc-400 transition-colors leading-snug">
+                {post.data.title}
+              </h2>
+              <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400 line-clamp-1">
+                {post.data.description}
+              </p>
+            </div>
+            <time
+              datetime={post.data.pubDate.toISOString()}
+              class="shrink-0 text-sm text-zinc-400 dark:text-zinc-600 tabular-nums"
+            >
+              {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(post.data.pubDate)}
+            </time>
+          </a>
+        );
+      })}
+    </div>
+  </div>
+</Layout>
