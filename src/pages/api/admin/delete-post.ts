@@ -2,8 +2,7 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { unlink } from 'node:fs/promises';
-import { join } from 'node:path';
+import { deletePost } from '../../../lib/firebase-admin.js';
 
 export const DELETE: APIRoute = async ({ url, cookies }) => {
   if (cookies.get('admin_session')?.value !== 'authenticated') {
@@ -21,22 +20,10 @@ export const DELETE: APIRoute = async ({ url, cookies }) => {
     });
   }
 
-  const base = join(process.cwd(), 'src', 'content', 'blog');
+  await deletePost(slug);
 
-  for (const ext of ['.mdx', '.md']) {
-    try {
-      await unlink(join(base, `${slug}${ext}`));
-      return new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    } catch {
-      // try next extension
-    }
-  }
-
-  return new Response(JSON.stringify({ error: 'Post not found' }), {
-    status: 404,
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
     headers: { 'Content-Type': 'application/json' },
   });
 };
