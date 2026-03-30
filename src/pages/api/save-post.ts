@@ -39,7 +39,7 @@ export const POST: APIRoute = async (context) => {
   }
 
   try {
-    const body = await request.json() as { markdown: unknown };
+    const body = await request.json() as { markdown: unknown; slug?: unknown };
     const markdown = body.markdown;
     if (typeof markdown !== 'string' || markdown.length === 0) {
       return new Response(JSON.stringify({ error: 'Invalid markdown' }), {
@@ -47,8 +47,12 @@ export const POST: APIRoute = async (context) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    const title = extractTitle(markdown);
-    const slug = titleToSlug(title);
+    // Use explicit slug from editor if valid, otherwise derive from frontmatter title
+    const explicitSlug =
+      typeof body.slug === 'string' && /^[a-z0-9][a-z0-9-]*$/.test(body.slug)
+        ? body.slug
+        : null;
+    const slug = explicitSlug ?? titleToSlug(extractTitle(markdown));
     const filename = `${slug}.mdx`;
     const dir = join(process.cwd(), 'src', 'content', 'blog');
 

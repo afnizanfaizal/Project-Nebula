@@ -3,20 +3,132 @@
 import '@mdxeditor/editor/style.css';
 import {
   MDXEditor,
+  type MDXEditorMethods,
+  type JsxEditorProps,
+  type MdastJsx,
   headingsPlugin,
   listsPlugin,
   quotePlugin,
   codeBlockPlugin,
   markdownShortcutPlugin,
   frontmatterPlugin,
+  imagePlugin,
+  jsxPlugin,
   toolbarPlugin,
   UndoRedo,
   BoldItalicUnderlineToggles,
   BlockTypeSelect,
   InsertCodeBlock,
   CodeMirrorEditor,
+  useMdastNodeUpdater,
+  usePublisher,
+  insertJsx$,
 } from '@mdxeditor/editor';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+
+// ── FigureEditor ────────────────────────────────────────────────────────────
+// Rendered by MDXEditor inside the jsxPlugin whenever it encounters <Figure>.
+// Shows a live preview with an alignment toolbar and optional caption input.
+
+type Align = 'none' | 'left' | 'right' | 'center';
+
+function getAttr(node: MdastJsx, name: string): string {
+  const attr = (node.attributes ?? []).find(
+    (a): a is { type: 'mdxJsxAttribute'; name: string; value: string } =>
+      'name' in a && a.name === name,
+  );
+  return typeof attr?.value === 'string' ? attr.value : '';
+}
+
+function withAttr(node: MdastJsx, name: string, value: string): MdastJsx['attributes'] {
+  const attrs = (node.attributes ?? []).filter(a => !('name' in a && a.name === name));
+  return [...attrs, { type: 'mdxJsxAttribute', name, value }];
+}
+
+const ALIGN_BTNS: { value: Align; label: string }[] = [
+  { value: 'none',   label: 'Block'  },
+  { value: 'left',   label: 'Left'   },
+  { value: 'center', label: 'Center' },
+  { value: 'right',  label: 'Right'  },
+];
+
+function FigureEditor({ mdastNode }: JsxEditorProps) {
+  const updateNode = useMdastNodeUpdater<MdastJsx>();
+  const src     = getAttr(mdastNode, 'src');
+  const alt     = getAttr(mdastNode, 'alt');
+  const align   = (getAttr(mdastNode, 'align') || 'none') as Align;
+  const caption = getAttr(mdastNode, 'caption');
+
+  const set = (name: string, value: string) =>
+    updateNode({ attributes: withAttr(mdastNode, name, value) });
+
+  const previewStyle: React.CSSProperties = {
+    none:   { display: 'block', maxWidth: '100%' },
+    left:   { float: 'left',  maxWidth: '45%', marginRight: '1rem' },
+    right:  { float: 'right', maxWidth: '45%', marginLeft:  '1rem' },
+    center: { display: 'block', margin: '0 auto', maxWidth: '60%' },
+  }[align];
+
+  return (
+    <div contentEditable={false} style={{ userSelect: 'none', marginBottom: '1rem' }}>
+      <figure style={{ margin: 0, ...previewStyle }}>
+        <img src={src} alt={alt} style={{ width: '100%', borderRadius: 6, display: 'block' }} />
+        {caption && (
+          <figcaption style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', marginTop: 4, fontStyle: 'italic' }}>
+            {caption}
+          </figcaption>
+        )}
+      </figure>
+
+      {/* Alignment + caption toolbar */}
+      <div style={{
+        display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap',
+        marginTop: 6, padding: '4px 6px',
+        background: '#18181b', border: '1px solid #3f3f46', borderRadius: 6,
+        clear: 'both',
+      }}>
+        <span style={{ fontSize: 11, color: '#71717a', marginRight: 2 }}>Align:</span>
+        {ALIGN_BTNS.map(btn => (
+          <button
+            key={btn.value}
+            type="button"
+            onClick={() => set('align', btn.value)}
+            style={{
+              padding: '2px 8px', fontSize: 11, borderRadius: 4, border: 'none',
+              cursor: 'pointer',
+              background: align === btn.value ? '#3f3f46' : 'transparent',
+              color:      align === btn.value ? '#fafafa'  : '#a1a1aa',
+            }}
+          >
+            {btn.label}
+          </button>
+        ))}
+        <span style={{ flex: 1 }} />
+        <input
+          placeholder="Add caption…"
+          defaultValue={caption}
+          onBlur={e => set('caption', e.target.value)}
+          style={{
+            background: 'transparent', border: '1px solid #3f3f46', color: '#e4e4e7',
+            borderRadius: 4, padding: '2px 6px', fontSize: 11, width: 140,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── InsertJsxBridge ─────────────────────────────────────────────────────────
+// Renders nothing visible. Lives inside the toolbar so it has access to
+// MDXEditor's gurx context. Captures the insertJsx$ publisher into a ref so
+// the command-bar upload button (outside MDXEditor) can call it.
+type InsertJsxFn = (payload: { name: string; kind: 'flow' | 'text'; props: Record<string, string | boolean> }) => void;
+
+function InsertJsxBridge({ bridgeRef }: { bridgeRef: React.MutableRefObject<InsertJsxFn | null> }) {
+  const insertJsx = usePublisher(insertJsx$);
+  bridgeRef.current = insertJsx;
+  return null;
+}
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -33,8 +145,6 @@ Start writing here...
 `;
 
 // Override @mdxeditor/editor CSS custom properties for dark theme.
-// These cascade down to all MDXEditor sub-components, replacing the
-// light-theme defaults set on :root in @mdxeditor/editor/style.css.
 const DARK_EDITOR_VARS = {
   '--baseBg': '#18181b',
   '--basePageBg': '#09090b',
@@ -67,23 +177,116 @@ function wordCount(text: string) {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
-export default function BlogEditor() {
-  const [markdown, setMarkdown] = useState(INITIAL_MARKDOWN);
+/** Remove image nodes with no src — artefacts from accidental toolbar clicks */
+function stripBrokenImages(md: string): string {
+  return md.replace(/!\[[^\]]*\]\(\s*\)\n?/g, '');
+}
+
+// Stable plugin list — defined outside the component so the array reference
+// never changes between renders, preventing MDXEditor from re-initialising.
+// Static plugins — no component-level refs needed.
+const STATIC_PLUGINS = [
+  headingsPlugin(),
+  listsPlugin(),
+  quotePlugin(),
+  frontmatterPlugin(),
+  codeBlockPlugin({
+    defaultCodeBlockLanguage: 'ts',
+    codeBlockEditorDescriptors: [
+      { match: () => true, priority: 100, Editor: CodeMirrorEditor },
+    ],
+  }),
+  imagePlugin(),
+  jsxPlugin({
+    jsxComponentDescriptors: [
+      {
+        name: 'Figure',
+        kind: 'flow',
+        // No `source` — Figure is passed via components prop in [slug].astro.
+        props: [
+          { name: 'src',     type: 'string' },
+          { name: 'alt',     type: 'string' },
+          { name: 'align',   type: 'string' },
+          { name: 'caption', type: 'string' },
+        ],
+        hasChildren: false,
+        Editor: FigureEditor,
+      },
+    ],
+  }),
+  markdownShortcutPlugin(),
+];
+
+interface Props {
+  slug?: string;
+}
+
+export default function BlogEditor({ slug: initialSlug = '' }: Props) {
+  const editorRef    = useRef<MDXEditorMethods>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Captures insertJsx$ publisher from inside MDXEditor's context (see InsertJsxBridge).
+  const insertJsxRef = useRef<InsertJsxFn | null>(null);
+
+  // Toolbar plugin is created per-instance because it closes over insertJsxRef.
+  const plugins = useMemo(() => [
+    ...STATIC_PLUGINS,
+    toolbarPlugin({
+      toolbarContents: () => (
+        <>
+          <InsertJsxBridge bridgeRef={insertJsxRef} />
+          <UndoRedo />
+          <BoldItalicUnderlineToggles />
+          <BlockTypeSelect />
+          <InsertCodeBlock />
+        </>
+      ),
+    }),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], []);
+
+  const [markdown, setMarkdown] = useState(() => stripBrokenImages(INITIAL_MARKDOWN));
   const [saving, setSaving] = useState(false);
+  const [imgUploading, setImgUploading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle');
-  const [slug, setSlug] = useState('new-post');
+  const [slug, setSlug] = useState(initialSlug || 'new-post');
+  const [loading, setLoading] = useState(Boolean(initialSlug));
+
+  // Load existing post content when a slug is provided
+  useEffect(() => {
+    if (!initialSlug) return;
+    let cancelled = false;
+    async function loadPost() {
+      try {
+        const res = await fetch(`/api/admin/get-post?slug=${encodeURIComponent(initialSlug)}`);
+        if (!res.ok) return;
+        const data = await res.json() as { content: string; slug: string };
+        if (!cancelled) {
+          const clean = stripBrokenImages(data.content);
+          setMarkdown(clean);
+          setSlug(data.slug);
+          setEditorKey(k => k + 1); // remount with loaded content
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadPost();
+    return () => { cancelled = true; };
+  }, [initialSlug]);
 
   const words = useMemo(() => wordCount(markdown), [markdown]);
   const readingMins = Math.max(1, Math.ceil(words / 200));
 
   const handleSave = async () => {
+    // Grab the latest content from the editor before saving
+    const latest = editorRef.current?.getMarkdown() ?? markdown;
     setSaving(true);
     setStatus('idle');
     try {
       const res = await fetch('/api/save-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ markdown, slug }),
+        body: JSON.stringify({ markdown: latest, slug }),
       });
       setStatus(res.ok ? 'saved' : 'error');
     } catch {
@@ -94,13 +297,56 @@ export default function BlogEditor() {
     }
   };
 
+  const handleImageFile = async (file: File) => {
+    setImgUploading(true);
+    try {
+      const form = new FormData();
+      form.append('image', file);
+      const res = await fetch('/api/admin/upload-image', { method: 'POST', body: form });
+      const data = await res.json() as { url?: string; error?: string };
+      if (!res.ok || !data.url) throw new Error(data.error ?? 'Upload failed');
+
+      // Use insertJsx$ (via the bridge ref) — the correct MDXEditor API for
+      // inserting JSX nodes. insertMarkdown() does not handle MDX JSX syntax.
+      insertJsxRef.current?.({
+        name: 'Figure',
+        kind: 'flow',
+        props: { src: data.url, alt: 'image', align: 'none' },
+      });
+    } catch (err) {
+      alert(`Upload failed: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setImgUploading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-zinc-950">
+        <div className="w-5 h-5 border border-zinc-700 border-t-zinc-400 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div
-      className="flex flex-col bg-zinc-950"
-      style={{ minHeight: 'calc(100vh - 57px)', ...DARK_EDITOR_VARS }}
+      className="flex flex-col bg-zinc-950 h-screen"
+      style={DARK_EDITOR_VARS as React.CSSProperties}
     >
       {/* ── Command bar ───────────────────────────────────────────── */}
-      <div className="sticky top-[57px] z-40 flex items-center gap-3 px-5 h-12 border-b border-zinc-800 bg-zinc-900/95 backdrop-blur-sm">
+      <div className="sticky top-0 z-40 flex items-center gap-3 px-5 h-12 border-b border-zinc-800 bg-zinc-900/95 backdrop-blur-sm">
+        {/* Back to dashboard */}
+        <a
+          href="/admin/dashboard"
+          className="flex items-center gap-1 text-zinc-600 hover:text-zinc-400 transition-colors mr-1"
+          aria-label="Back to dashboard"
+          title="Dashboard"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+          </svg>
+        </a>
+
         {/* File path */}
         <span className="text-zinc-600 text-[11px] font-mono select-none">posts/</span>
         <input
@@ -137,6 +383,41 @@ export default function BlogEditor() {
           </span>
         )}
 
+        {/* Hidden file input for image upload */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleImageFile(file);
+            e.target.value = '';
+          }}
+        />
+
+        {/* Insert image button */}
+        <button
+          type="button"
+          title={imgUploading ? 'Uploading…' : 'Insert image'}
+          disabled={imgUploading}
+          onClick={() => fileInputRef.current?.click()}
+          className="flex items-center justify-center w-7 h-7 rounded text-zinc-400
+                     hover:text-zinc-100 hover:bg-zinc-800 transition-colors
+                     disabled:opacity-40 disabled:cursor-wait"
+        >
+          {imgUploading ? (
+            <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+              <circle cx="12" cy="12" r="10" strokeOpacity={0.25} />
+              <path d="M12 2a10 10 0 0 1 10 10" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2.25 15.75 7.409 10.59a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 19.5h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+            </svg>
+          )}
+        </button>
+
         {/* Save button */}
         <button
           onClick={handleSave}
@@ -151,34 +432,13 @@ export default function BlogEditor() {
       </div>
 
       {/* ── Editor area ───────────────────────────────────────────── */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-6 py-10">
           <MDXEditor
+            ref={editorRef}
             markdown={markdown}
             onChange={setMarkdown}
-            plugins={[
-              headingsPlugin(),
-              listsPlugin(),
-              quotePlugin(),
-              frontmatterPlugin(),
-              codeBlockPlugin({
-                defaultCodeBlockLanguage: 'ts',
-                codeBlockEditorDescriptors: [
-                  { match: () => true, priority: 100, Editor: CodeMirrorEditor },
-                ],
-              }),
-              markdownShortcutPlugin(),
-              toolbarPlugin({
-                toolbarContents: () => (
-                  <>
-                    <UndoRedo />
-                    <BoldItalicUnderlineToggles />
-                    <BlockTypeSelect />
-                    <InsertCodeBlock />
-                  </>
-                ),
-              }),
-            ]}
+            plugins={plugins}
             contentEditableClassName="prose prose-invert prose-zinc max-w-none min-h-[65vh] outline-none"
           />
         </div>

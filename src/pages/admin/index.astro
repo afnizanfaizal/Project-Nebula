@@ -1,6 +1,6 @@
 ---
 export const prerender = false;
-import Layout from '../../layouts/Layout.astro';
+import AdminLayout from '../../layouts/AdminLayout.astro';
 
 if (Astro.request.method === 'POST') {
   const data = await Astro.request.formData();
@@ -14,12 +14,12 @@ if (Astro.request.method === 'POST') {
       sameSite: 'strict',
       maxAge: 60 * 60 * 24,
     });
-    return Astro.redirect('/admin/editor');
+    return Astro.redirect('/admin/dashboard');
   }
 }
 ---
-<Layout title="Admin — Dr. Afnizanfaizal">
-  <div class="flex items-center justify-center px-6" style="min-height: calc(100vh - 57px)">
+<AdminLayout title="Admin — Dr. Afnizanfaizal">
+  <div class="flex items-center justify-center px-6 min-h-screen">
     <div class="w-full max-w-xs">
       <!-- Lock icon -->
       <div class="mb-8 flex justify-center">
@@ -64,4 +64,4 @@ if (Astro.request.method === 'POST') {
       </form>
     </div>
   </div>
-</Layout>
+</AdminLayout>

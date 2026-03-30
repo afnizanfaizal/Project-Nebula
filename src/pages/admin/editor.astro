@@ -1,8 +1,12 @@
 ---
 export const prerender = false;
-import Layout from '../../layouts/Layout.astro';
+import AdminLayout from '../../layouts/AdminLayout.astro';
 import BlogEditor from '../../components/react/MDXEditor';
+
+// Pass slug from query param so the editor can load an existing post
+const slug = Astro.url.searchParams.get('slug') ?? '';
+const pageTitle = slug ? `Edit: ${slug} — Admin` : 'New Post — Admin';
 ---
-<Layout title="Editor — Admin">
-  <BlogEditor client:only="react" />
-</Layout>
+<AdminLayout title={pageTitle}>
+  <BlogEditor slug={slug} client:only="react" />
+</AdminLayout>

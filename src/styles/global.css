@@ -48,6 +48,182 @@
   ::-webkit-scrollbar-thumb { @apply bg-zinc-300 dark:bg-zinc-700 rounded-full; }
 }
 
+/* ── MDXEditor dark-mode overrides ─────────────────────────────────────────
+   The editor ships light-theme defaults on :root that win over our inline CSS
+   vars. These selectors target the CSS-module class substrings to force OLED
+   dark regardless of specificity war.
+   -------------------------------------------------------------------------- */
+[class*="_editorRoot_"],
+[class*="_editorWrapper_"] {
+  background-color: #09090b !important;
+  color: #e4e4e7 !important;
+}
+
+/* Toolbar */
+[class*="_toolbarRoot_"] {
+  background-color: #09090b !important;
+  border-bottom: 1px solid #27272a !important;
+}
+
+[class*="_toolbarRoot_"] button,
+[class*="_toolbarRoot_"] [role="button"],
+[class*="_toolbarRoot_"] [class*="_toolbarButton_"],
+[class*="_toolbarRoot_"] * {
+  color: #ffffff !important;
+  background-color: transparent !important;
+}
+
+[class*="_toolbarRoot_"] svg {
+  color: #ffffff !important;
+}
+
+/* For stroke-only custom toolbar icons, prevent fill from being applied */
+.upload-img-btn svg,
+.upload-img-btn svg path {
+  fill: none !important;
+  stroke: #ffffff !important;
+}
+
+[class*="_toolbarRoot_"] button:hover,
+[class*="_toolbarRoot_"] [role="button"]:hover,
+[class*="_toolbarRoot_"] [class*="_toolbarButton_"]:hover {
+  background-color: #27272a !important;
+  color: #ffffff !important;
+}
+
+[class*="_toolbarRoot_"] button[class*="_activeToolbarButton_"],
+[class*="_toolbarRoot_"] [class*="_activeToolbarButton_"] {
+  background-color: #3f3f46 !important;
+  color: #ffffff !important;
+}
+
+/* Block type / dropdowns */
+[class*="_selectTrigger_"],
+[class*="_selectContent_"],
+[class*="_selectItem_"],
+[class*="_selectTrigger_"] *,
+[class*="_selectContent_"] * {
+  background-color: #18181b !important;
+  color: #ffffff !important;
+  border-color: #3f3f46 !important;
+}
+
+[class*="_selectItem_"]:hover,
+[class*="_selectItem_"][data-highlighted] {
+  background-color: #3f3f46 !important;
+  color: #fafafa !important;
+}
+
+/* Content-editable area */
+[class*="_contentEditable_"],
+[class*="_rootContentEditable_"] {
+  color: #e4e4e7 !important;
+  caret-color: #e4e4e7 !important;
+}
+
+/* Code blocks */
+[class*="_codeBlock_"],
+[class*="_codeMirrorWrapper_"] {
+  background-color: #18181b !important;
+  border-color: #3f3f46 !important;
+}
+
+/* Frontmatter editor */
+[class*="_frontmatterWrapper_"],
+[class*="_propertyRow_"] {
+  background-color: #18181b !important;
+  border-color: #3f3f46 !important;
+  color: #e4e4e7 !important;
+}
+
+[class*="_propertyRow_"] input {
+  color: #e4e4e7 !important;
+  background-color: transparent !important;
+}
+
+/* Dividers / separators in toolbar */
+[class*="_toolbarRoot_"] [class*="_separator_"] {
+  background-color: #3f3f46 !important;
+}
+
+/* ── MDXEditor dialogs / popups (e.g. InsertImage, link editor) ─────────── */
+[class*="_popupContainer_"],
+[class*="_dialogContent_"],
+[class*="_Dialog_"] > div,
+[class*="_imageDialog_"],
+[class*="_tableEditor_"],
+[class*="_linkDialogPopup_"],
+[class*="_editImageToolbar_"] {
+  background-color: #18181b !important;
+  color: #e4e4e7 !important;
+  border: 1px solid #3f3f46 !important;
+  border-radius: 8px !important;
+}
+
+/* Dialog inputs */
+[class*="_popupContainer_"] input,
+[class*="_dialogContent_"] input,
+[class*="_imageDialog_"] input,
+[class*="_linkDialogPopup_"] input {
+  background-color: #27272a !important;
+  color: #e4e4e7 !important;
+  border: 1px solid #3f3f46 !important;
+  border-radius: 4px !important;
+  padding: 4px 8px !important;
+}
+
+[class*="_popupContainer_"] input::placeholder,
+[class*="_dialogContent_"] input::placeholder,
+[class*="_imageDialog_"] input::placeholder {
+  color: #71717a !important;
+}
+
+/* Dialog labels */
+[class*="_popupContainer_"] label,
+[class*="_dialogContent_"] label,
+[class*="_imageDialog_"] label {
+  color: #a1a1aa !important;
+}
+
+/* Dialog buttons */
+[class*="_popupContainer_"] button,
+[class*="_dialogContent_"] button,
+[class*="_imageDialog_"] button,
+[class*="_linkDialogPopup_"] button {
+  background-color: #27272a !important;
+  color: #e4e4e7 !important;
+  border: 1px solid #3f3f46 !important;
+  border-radius: 4px !important;
+}
+
+[class*="_popupContainer_"] button:hover,
+[class*="_dialogContent_"] button:hover,
+[class*="_imageDialog_"] button:hover,
+[class*="_linkDialogPopup_"] button:hover {
+  background-color: #3f3f46 !important;
+  color: #ffffff !important;
+}
+
+/* Radix overlay backdrop */
+[class*="_overlayBg_"],
+[data-radix-dialog-overlay] {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Ensure dialogs/popups float above everything */
+[data-radix-popper-content-wrapper],
+[data-radix-dialog-content],
+[class*="_popupContainer_"],
+[class*="_dialogContent_"] {
+  z-index: 9999 !important;
+}
+
+/* File upload button inside image dialog */
+[class*="_imageDialog_"] [type="file"],
+[class*="_dialogContent_"] [type="file"] {
+  color: #e4e4e7 !important;
+}
+
 @layer utilities {
   .font-mono {
     font-feature-settings: 'liga' 0, 'calt' 0;
