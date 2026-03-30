@@ -19,7 +19,9 @@ function extractTitle(markdown: string): string {
   return match ? match[1] : 'untitled';
 }
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async (context) => {
+  const { request } = context;
+
   if (import.meta.env.PROD) {
     return new Response(JSON.stringify({ error: 'Not available in production' }), {
       status: 403,
@@ -27,8 +29,24 @@ export const POST: APIRoute = async ({ request }) => {
     });
   }
 
+  // Verify admin session even in dev
+  const sessionCookie = context.cookies.get('admin_session');
+  if (sessionCookie?.value !== 'authenticated') {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
-    const { markdown } = await request.json() as { markdown: string };
+    const body = await request.json() as { markdown: unknown };
+    const markdown = body.markdown;
+    if (typeof markdown !== 'string' || markdown.length === 0) {
+      return new Response(JSON.stringify({ error: 'Invalid markdown' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
     const title = extractTitle(markdown);
     const slug = titleToSlug(title);
     const filename = `${slug}.mdx`;

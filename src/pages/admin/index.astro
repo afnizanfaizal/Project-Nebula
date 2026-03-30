@@ -7,7 +7,7 @@ if (Astro.request.method === 'POST') {
   const password = data.get('password');
 
   if (password === import.meta.env.ADMIN_PASSWORD) {
-    Astro.cookies.set('admin_session', String(password), {
+    Astro.cookies.set('admin_session', 'authenticated', {
       path: '/',
       httpOnly: true,
       secure: import.meta.env.PROD,

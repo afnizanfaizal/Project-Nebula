@@ -9,6 +9,8 @@ import node from '@astrojs/node';
 
 export default defineConfig({
   site: 'https://afnizanfaizal.com',
+  // 'hybrid' mode was removed in Astro 6. Using 'server' with explicit
+  // `export const prerender = true` on all static pages is the Astro 6 equivalent.
   output: 'server',
   adapter: node({ mode: 'standalone' }),
   integrations: [

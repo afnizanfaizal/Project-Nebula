@@ -14,7 +14,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   const cookie = context.cookies.get('admin_session');
-  if (cookie?.value === import.meta.env.ADMIN_PASSWORD) {
+  if (cookie?.value === 'authenticated') {
     return next();
   }
 
