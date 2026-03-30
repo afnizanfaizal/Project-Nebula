@@ -4,6 +4,7 @@ import PostLayout from '../../layouts/PostLayout.astro';
 import CodeBlock from '../../components/mdx/CodeBlock.astro';
 import Callout from '../../components/mdx/Callout.astro';
 import ZoomImage from '../../components/mdx/ZoomImage.astro';
+import ViewCounter from '../../components/react/ViewCounter';
 import { getReadingTime } from '../../lib/utils';
 
 export async function getStaticPaths() {
@@ -16,8 +17,10 @@ export async function getStaticPaths() {
 
 const { entry } = Astro.props;
 const { Content, headings } = await render(entry);
+const slug = entry.id.replace(/\.mdx?$/, '');
 const minutesRead = getReadingTime(entry.body ?? '');
 ---
 <PostLayout entry={entry} headings={headings} minutesRead={minutesRead}>
+  <ViewCounter slug={slug} client:idle slot="after-meta" />
   <Content components={{ pre: CodeBlock, Callout, ZoomImage }} />
 </PostLayout>
