@@ -16,7 +16,7 @@ export async function getStaticPaths() {
 
 const { entry } = Astro.props;
 const { Content } = await render(entry);
-const { title, description, tags, status, link } = entry.data;
+const { title, description, tags, link } = entry.data;
 ---
 <Layout title={`${title} — Dr. Afnizanfaizal`} description={description}>
   <div class="mx-auto max-w-3xl px-6 py-16">
