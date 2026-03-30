@@ -1,0 +1,100 @@
+---
+// src/layouts/PostLayout.astro
+import type { CollectionEntry } from 'astro:content';
+import Layout from './Layout.astro';
+import TableOfContents from '../components/TableOfContents.astro';
+
+interface Props {
+  entry: CollectionEntry<'blog'>;
+  headings: { depth: number; slug: string; text: string }[];
+  minutesRead: number;
+}
+
+const { entry, headings, minutesRead } = Astro.props;
+const { title, pubDate, updatedDate, description, tags } = entry.data;
+
+const formattedDate = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+}).format(pubDate);
+---
+<Layout title={`${title} — Dr. Afnizanfaizal`} description={description}>
+  <!-- Reading progress bar -->
+  <div
+    id="progress-bar"
+    class="fixed top-0 left-0 h-0.5 bg-zinc-900 dark:bg-zinc-100 z-[60] transition-none"
+    style="width: 0%"
+    aria-hidden="true"
+  ></div>
+
+  <div class="mx-auto max-w-5xl px-6 py-16">
+    <div class="lg:grid lg:grid-cols-[1fr_220px] lg:gap-16">
+      <!-- Main content -->
+      <article>
+        <!-- Post header -->
+        <header class="mb-10">
+          {tags.length > 0 && (
+            <div class="mb-4 flex flex-wrap gap-2">
+              {tags.map((tag) => (
+                <a
+                  href={`/blog?tag=${tag}`}
+                  class="text-xs font-medium uppercase tracking-widest text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+                >
+                  {tag}
+                </a>
+              ))}
+            </div>
+          )}
+
+          <h1 class="text-3xl sm:text-4xl font-bold tracking-tight leading-tight text-zinc-900 dark:text-zinc-100">
+            {title}
+          </h1>
+
+          <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-500 dark:text-zinc-400">
+            <time datetime={pubDate.toISOString()}>{formattedDate}</time>
+            <span aria-hidden="true">·</span>
+            <span>{minutesRead} min read</span>
+            {updatedDate && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>Updated <time datetime={updatedDate.toISOString()}>
+                  {new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(updatedDate)}
+                </time></span>
+              </>
+            )}
+          </div>
+          <slot name="after-meta" />
+        </header>
+
+        <!-- MDX content -->
+        <div class="prose prose-zinc dark:prose-invert prose-lg max-w-none
+          prose-headings:scroll-mt-20
+          prose-a:text-zinc-900 dark:prose-a:text-zinc-100 prose-a:underline-offset-4
+          prose-code:font-mono prose-code:text-sm">
+          <slot />
+        </div>
+      </article>
+
+      <!-- Sidebar TOC (desktop only) -->
+      <aside class="hidden lg:block">
+        <div class="sticky top-24">
+          <TableOfContents headings={headings} />
+        </div>
+      </aside>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  const bar = document.getElementById('progress-bar');
+  if (bar) {
+    const update = () => {
+      const scrolled = document.documentElement.scrollTop;
+      const total = document.documentElement.scrollHeight - window.innerHeight;
+      bar.style.width = total > 0 ? `${(scrolled / total) * 100}%` : '0%';
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    update();
+  }
+</script>

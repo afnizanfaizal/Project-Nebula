@@ -1,0 +1,55 @@
+---
+// src/components/TableOfContents.astro
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  headings: Heading[];
+}
+
+const { headings } = Astro.props;
+const toc = headings.filter((h) => h.depth === 2 || h.depth === 3);
+---
+{toc.length > 0 && (
+  <nav class="toc" aria-label="Table of contents">
+    <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-600">
+      On this page
+    </p>
+    <ol class="space-y-1.5 text-sm">
+      {toc.map((heading) => (
+        <li class={heading.depth === 3 ? 'pl-3' : ''}>
+          <a
+            href={`#${heading.slug}`}
+            class="toc-link block text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors leading-snug py-0.5"
+          >
+            {heading.text}
+          </a>
+        </li>
+      ))}
+    </ol>
+  </nav>
+)}
+
+<script>
+  // Highlight active section as user scrolls
+  const links = document.querySelectorAll<HTMLAnchorElement>('.toc-link');
+  const headings = Array.from(document.querySelectorAll<HTMLHeadingElement>('h2[id], h3[id]'));
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          links.forEach((l) => l.classList.remove('text-zinc-900', 'dark:text-zinc-100', 'font-medium'));
+          const active = document.querySelector<HTMLAnchorElement>(`.toc-link[href="#${entry.target.id}"]`);
+          active?.classList.add('text-zinc-900', 'dark:text-zinc-100', 'font-medium');
+        }
+      }
+    },
+    { rootMargin: '-20% 0% -70% 0%' }
+  );
+
+  headings.forEach((h) => observer.observe(h));
+</script>
