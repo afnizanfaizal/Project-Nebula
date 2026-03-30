@@ -27,3 +27,6 @@ pnpm-debug.log*
 # project-specific
 .superpowers/
 service-account.json
+
+# git worktrees
+.worktrees/
