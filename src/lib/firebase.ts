@@ -36,9 +36,9 @@ export async function incrementPostViews(slug: string): Promise<number> {
     return 1;
   }
 
+  const currentViews = (snap.data()?.views as number) ?? 0;
   await updateDoc(ref, { views: increment(1) });
-  const updated = await getDoc(ref);
-  return (updated.data()?.views as number) ?? 1;
+  return currentViews + 1;
 }
 
 /**
@@ -47,5 +47,7 @@ export async function incrementPostViews(slug: string): Promise<number> {
 export async function getPostViews(slug: string): Promise<number> {
   const ref = doc(db, 'posts', slug);
   const snap = await getDoc(ref);
-  return snap.exists() ? ((snap.data().views as number) ?? 0) : 0;
+  if (!snap.exists()) return 0;
+  const views = snap.data()?.views;
+  return typeof views === 'number' ? views : 0;
 }
