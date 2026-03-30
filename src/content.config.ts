@@ -3,7 +3,13 @@ import { defineCollection, z } from 'astro:content';
 import { glob } from 'astro/loaders';
 
 const blog = defineCollection({
-  loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/blog' }),
+  loader: glob({
+    // NOTE: Content files must stay at root level of this directory — no subdirectories.
+    // Nested paths (e.g., 2026/post.mdx) would produce IDs like "2026/post.mdx" and
+    // break the flat /blog/[slug] routing in src/pages/blog/[slug].astro.
+    pattern: '**/*.{md,mdx}',
+    base: './src/content/blog',
+  }),
   schema: z.object({
     title: z.string(),
     pubDate: z.coerce.date(),
@@ -17,7 +23,13 @@ const blog = defineCollection({
 });
 
 const projects = defineCollection({
-  loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/projects' }),
+  loader: glob({
+    // NOTE: Content files must stay at root level of this directory — no subdirectories.
+    // Nested paths (e.g., 2026/post.mdx) would produce IDs like "2026/post.mdx" and
+    // break the flat /blog/[slug] routing in src/pages/blog/[slug].astro.
+    pattern: '**/*.{md,mdx}',
+    base: './src/content/projects',
+  }),
   schema: z.object({
     title: z.string(),
     description: z.string(),
