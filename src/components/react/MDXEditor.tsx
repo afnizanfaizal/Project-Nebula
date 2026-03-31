@@ -24,7 +24,7 @@ import {
   usePublisher,
   insertJsx$,
 } from '@mdxeditor/editor';
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 
 // ── FigureEditor ────────────────────────────────────────────────────────────
 // Rendered by MDXEditor inside the jsxPlugin whenever it encounters <Figure>.
@@ -244,12 +244,26 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   ], []);
 
+  const [editorKey, setEditorKey] = useState(0);
+  // seedMarkdown initialises the editor (passed as `markdown` prop, read once on mount).
+  // Never feed onChange output back into this — doing so would trigger MDXEditor's internal
+  // corePlugin.update which re-subscribes onChange and can cause subtle reset races.
+  const [seedMarkdown, setSeedMarkdown] = useState(() => stripBrokenImages(INITIAL_MARKDOWN));
+  // latestMarkdown is updated synchronously via onChange; used for word-count and as the
+  // source of truth for Save. A ref (not state) avoids any React async-state lag.
+  const latestMarkdownRef = useRef(stripBrokenImages(INITIAL_MARKDOWN));
   const [markdown, setMarkdown] = useState(() => stripBrokenImages(INITIAL_MARKDOWN));
   const [saving, setSaving] = useState(false);
   const [imgUploading, setImgUploading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+  const [statusMsg, setStatusMsg] = useState('');
   const [slug, setSlug] = useState(initialSlug || 'new-post');
   const [loading, setLoading] = useState(Boolean(initialSlug));
+
+  const handleChange = useCallback((md: string) => {
+    latestMarkdownRef.current = md;
+    setMarkdown(md); // drives word-count display only
+  }, []);
 
   // Load existing post content when a slug is provided
   useEffect(() => {
@@ -257,14 +271,21 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
     let cancelled = false;
     async function loadPost() {
       try {
-        const res = await fetch(`/api/admin/get-post?slug=${encodeURIComponent(initialSlug)}`);
+        // cache: 'no-store' prevents the browser returning a stale cached response
+        // when Astro's HMR reloads the page after a content-file write.
+        const res = await fetch(
+          `/api/admin/get-post?slug=${encodeURIComponent(initialSlug)}`,
+          { cache: 'no-store' },
+        );
         if (!res.ok) return;
         const data = await res.json() as { content: string; slug: string };
         if (!cancelled) {
           const clean = stripBrokenImages(data.content);
+          latestMarkdownRef.current = clean;
+          setSeedMarkdown(clean);
           setMarkdown(clean);
           setSlug(data.slug);
-          setEditorKey(k => k + 1); // remount with loaded content
+          setEditorKey(k => k + 1); // remount editor with loaded content
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -278,18 +299,33 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
   const readingMins = Math.max(1, Math.ceil(words / 200));
 
   const handleSave = async () => {
-    // Grab the latest content from the editor before saving
-    const latest = editorRef.current?.getMarkdown() ?? markdown;
+    // getMarkdown() reads the live Lexical/gurx state directly and will include content
+    // inserted via insertJsx$ (e.g. Figure nodes) that may not have fired onChange yet.
+    // Fall back to the ref if the editor is unmounted.
+    const fromEditor = editorRef.current?.getMarkdown();
+    const latest = fromEditor || latestMarkdownRef.current;
+    if (fromEditor) latestMarkdownRef.current = fromEditor; // keep ref in sync
     setSaving(true);
     setStatus('idle');
+    setStatusMsg('');
     try {
       const res = await fetch('/api/save-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ markdown: latest, slug }),
       });
-      setStatus(res.ok ? 'saved' : 'error');
-    } catch {
+      if (res.ok) {
+        // Update seedMarkdown so that if Astro HMR remounts the editor, it initialises
+        // with the just-saved content instead of the originally-loaded content.
+        setSeedMarkdown(latest);
+        setStatus('saved');
+      } else {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setStatusMsg(body.error ?? `HTTP ${res.status}`);
+        setStatus('error');
+      }
+    } catch (err) {
+      setStatusMsg(err instanceof Error ? err.message : String(err));
       setStatus('error');
     } finally {
       setSaving(false);
@@ -377,9 +413,9 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
           </span>
         )}
         {status === 'error' && (
-          <span className="flex items-center gap-1.5 text-[11px] text-red-400 font-medium">
+          <span className="flex items-center gap-1.5 text-[11px] text-red-400 font-medium" title={statusMsg}>
             <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-            Failed
+            {statusMsg ? `Failed: ${statusMsg}` : 'Failed'}
           </span>
         )}
 
@@ -435,9 +471,10 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-6 py-10">
           <MDXEditor
+            key={editorKey}
             ref={editorRef}
-            markdown={markdown}
-            onChange={setMarkdown}
+            markdown={seedMarkdown}
+            onChange={handleChange}
             plugins={plugins}
             contentEditableClassName="prose prose-invert prose-zinc max-w-none min-h-[65vh] outline-none"
           />

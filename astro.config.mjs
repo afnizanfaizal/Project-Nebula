@@ -7,6 +7,34 @@ import mdx from '@astrojs/mdx';
 import rehypeShiki from '@shikijs/rehype';
 import node from '@astrojs/node';
 
+/**
+ * Vite 7 crashes when a plugin has `transform: { filter: {...} }` with no `handler`
+ * property — getHookHandler() returns undefined and handler.call() explodes.
+ * This plugin removes such broken transform hooks before environment plugins are built.
+ */
+const patchBrokenTransforms = {
+  name: 'patch-broken-transforms',
+  enforce: /** @type {'pre'} */ ('pre'),
+  configResolved(config) {
+    let fixed = 0;
+    for (const plugin of config.plugins) {
+      if (
+        plugin.transform != null &&
+        typeof plugin.transform === 'object' &&
+        !('handler' in plugin.transform)
+      ) {
+        console.warn(
+          `[patch-broken-transforms] Removing broken transform from plugin: "${plugin.name}"`,
+        );
+        delete plugin.transform;
+        fixed++;
+      }
+    }
+    if (fixed > 0)
+      console.warn(`[patch-broken-transforms] Fixed ${fixed} plugin(s)`);
+  },
+};
+
 export default defineConfig({
   site: 'https://afnizanfaizal.com',
   // 'hybrid' mode was removed in Astro 6. Using 'server' with explicit
@@ -19,10 +47,12 @@ export default defineConfig({
     mdx(),
   ],
   vite: {
+    plugins: [patchBrokenTransforms],
     ssr: {
-      // Firebase ESM modules use browser-specific constructs (import.meta, etc.)
-      // that Vite must bundle rather than externalize for SSR to work correctly.
-      noExternal: ['firebase', '@firebase/app', '@firebase/firestore', '@firebase/util', '@firebase/component', '@firebase/logger'],
+      // Firebase ships browser-only ESM; Vite must bundle every @firebase/* sub-package
+      // rather than externalize them, otherwise the EnvironmentPluginContainer transform
+      // chain crashes on SSR pages that transitively import firebase.ts.
+      noExternal: [/^firebase/, /^@firebase\//],
     },
   },
   markdown: {

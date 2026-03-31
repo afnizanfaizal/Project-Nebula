@@ -19,7 +19,12 @@ const firebaseConfig = {
   appId: import.meta.env.PUBLIC_FIREBASE_APP_ID,
 };
 
-const isConfigured = Boolean(firebaseConfig.projectId && firebaseConfig.apiKey);
+// Firebase client SDK is browser-only — never initialise during SSR.
+// When credentials are present but we're on the server, leave db null so all
+// callers fall through to their graceful 0-value fallbacks.
+const isConfigured =
+  !import.meta.env.SSR &&
+  Boolean(firebaseConfig.projectId && firebaseConfig.apiKey);
 
 // Prevent re-initialization in dev hot reload; skip entirely if env vars not set
 const app = isConfigured
