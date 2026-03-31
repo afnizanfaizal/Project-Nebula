@@ -9,6 +9,7 @@ import {
   increment,
   type Firestore,
 } from 'firebase/firestore';
+import { getAuth, type Auth } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY,
@@ -31,6 +32,7 @@ const app = isConfigured
   ? getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
   : null;
 export const db: Firestore | null = app ? getFirestore(app) : null;
+export const auth: Auth | null = app ? getAuth(app) : null;
 
 /**
  * Increment view count for a post and return the new total.
