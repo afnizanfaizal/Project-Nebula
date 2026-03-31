@@ -1,17 +1,9 @@
-// src/pages/api/admin/delete-post.ts
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { deletePost } from '../../../lib/firebase-admin.js';
 
-export const DELETE: APIRoute = async ({ url, cookies }) => {
-  if (cookies.get('admin_session')?.value !== 'authenticated') {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
+export const DELETE: APIRoute = async ({ url }) => {
   const slug = url.searchParams.get('slug');
   if (!slug || !/^[a-z0-9][a-z0-9-]*$/.test(slug)) {
     return new Response(JSON.stringify({ error: 'Invalid slug' }), {
