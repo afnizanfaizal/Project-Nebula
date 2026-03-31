@@ -1,6 +1,7 @@
 // src/lib/firebase-admin.ts
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 
 const apps = getApps();
 const app = apps.length === 0
@@ -14,6 +15,20 @@ const app = apps.length === 0
   : apps[0];
 
 export const adminDb = getFirestore(app);
+export const adminAuth = getAuth(app);
+
+/**
+ * Returns true if the given cookie value is a valid, non-expired Firebase ID token.
+ */
+export async function isValidAdminToken(token: string | undefined): Promise<boolean> {
+  if (!token) return false;
+  try {
+    await adminAuth.verifyIdToken(token);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
