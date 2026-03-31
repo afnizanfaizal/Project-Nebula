@@ -2,17 +2,17 @@
 export const prerender = false;
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import AdminDashboard from '../../components/react/AdminDashboard';
-import { getCollection } from 'astro:content';
+import { listPosts } from '../../lib/firebase-admin.js';
 
-const blogPosts = await getCollection('blog');
-const posts = blogPosts.map((p) => ({
-  slug: p.id.replace(/\.mdx?$/, ''),
-  title: p.data.title,
-  pubDate: p.data.pubDate.toISOString(),
-  draft: p.data.draft,
-  tags: p.data.tags,
-  description: p.data.description,
-  featured: p.data.featured,
+const postList = await listPosts();
+const posts = postList.map((p) => ({
+  slug:        p.slug,
+  title:       p.title,
+  pubDate:     p.pubDate,
+  draft:       p.draft,
+  tags:        p.tags,
+  description: p.description,
+  featured:    p.featured,
 }));
 ---
 <AdminLayout title="Dashboard — Admin">
