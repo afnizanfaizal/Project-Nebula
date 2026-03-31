@@ -2,68 +2,62 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import matter from 'gray-matter';
 import { Timestamp } from 'firebase-admin/firestore';
 import { savePost } from '../../lib/firebase-admin.js';
 
-function titleToSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
+interface SavePayload {
+  meta: {
+    title:         string;
+    slug:          string;
+    description:   string;
+    featuredImage: string;
+    tags:          string[];
+    status:        'draft' | 'published';
+    pubDate:       string; // YYYY-MM-DD
+  };
+  body: string;
 }
 
-export const POST: APIRoute = async (context) => {
-  const { request } = context;
-
-  if (context.cookies.get('admin_session')?.value !== 'authenticated') {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
+export const POST: APIRoute = async ({ request }) => {
   try {
-    const body = await request.json() as { markdown: unknown; slug?: unknown };
-    const markdown = body.markdown;
-    if (typeof markdown !== 'string' || markdown.length === 0) {
-      return new Response(JSON.stringify({ error: 'Invalid markdown' }), {
+    const payload = await request.json() as SavePayload;
+    const { meta, body } = payload;
+
+    if (!meta?.slug || !/^[a-z0-9][a-z0-9-]*$/.test(meta.slug)) {
+      return new Response(JSON.stringify({ error: 'Invalid slug' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (typeof meta.title !== 'string' || meta.title.trim().length === 0) {
+      return new Response(JSON.stringify({ error: 'Title is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (typeof body !== 'string') {
+      return new Response(JSON.stringify({ error: 'Invalid body' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    const { data, content } = matter(markdown);
-
-    const explicitSlug =
-      typeof body.slug === 'string' && /^[a-z0-9][a-z0-9-]*$/.test(body.slug)
-        ? body.slug
-        : null;
-    const slug = explicitSlug ?? titleToSlug(String(data.title ?? 'untitled'));
-
-    const pubDate = data.pubDate
-      ? Timestamp.fromDate(new Date(data.pubDate as string))
+    const pubDate = meta.pubDate
+      ? Timestamp.fromDate(new Date(meta.pubDate))
       : Timestamp.now();
 
-    const updatedDate = data.updatedDate
-      ? Timestamp.fromDate(new Date(data.updatedDate as string))
-      : undefined;
-
-    await savePost(slug, {
-      title:         String(data.title ?? ''),
-      description:   String(data.description ?? ''),
+    await savePost(meta.slug, {
+      title:         meta.title.trim(),
+      description:   meta.description ?? '',
       pubDate,
-      ...(updatedDate ? { updatedDate } : {}),
-      tags:          Array.isArray(data.tags) ? data.tags.map(String) : [],
-      draft:         Boolean(data.draft ?? false),
-      featured:      Boolean(data.featured ?? false),
-      ...(data.featuredImage ? { featuredImage: String(data.featuredImage) } : {}),
-      content:       content.trimStart(),
+      tags:          Array.isArray(meta.tags) ? meta.tags.map(String) : [],
+      draft:         meta.status === 'draft',
+      featured:      false,
+      ...(meta.featuredImage ? { featuredImage: meta.featuredImage } : {}),
+      content:       body,
     });
 
-    return new Response(JSON.stringify({ ok: true, slug }), {
+    return new Response(JSON.stringify({ ok: true, slug: meta.slug }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
