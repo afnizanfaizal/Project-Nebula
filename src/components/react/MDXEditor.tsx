@@ -11,7 +11,6 @@ import {
   quotePlugin,
   codeBlockPlugin,
   markdownShortcutPlugin,
-  frontmatterPlugin,
   imagePlugin,
   jsxPlugin,
   toolbarPlugin,
@@ -27,9 +26,6 @@ import {
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 
 // ── FigureEditor ────────────────────────────────────────────────────────────
-// Rendered by MDXEditor inside the jsxPlugin whenever it encounters <Figure>.
-// Shows a live preview with an alignment toolbar and optional caption input.
-
 type Align = 'none' | 'left' | 'right' | 'center';
 
 function getAttr(node: MdastJsx, name: string): string {
@@ -72,7 +68,16 @@ function FigureEditor({ mdastNode }: JsxEditorProps) {
   return (
     <div contentEditable={false} style={{ userSelect: 'none', marginBottom: '1rem' }}>
       <figure style={{ margin: 0, ...previewStyle }}>
-        <img src={src} alt={alt} style={{ width: '100%', borderRadius: 6, display: 'block' }} />
+        <img
+          src={src}
+          alt={alt}
+          style={{ width: '100%', borderRadius: 6, display: 'block', minHeight: 80, background: '#27272a' }}
+          onError={(e) => {
+            const img = e.currentTarget;
+            img.style.minHeight = '80px';
+            img.style.background = '#27272a';
+          }}
+        />
         {caption && (
           <figcaption style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', marginTop: 4, fontStyle: 'italic' }}>
             {caption}
@@ -119,9 +124,6 @@ function FigureEditor({ mdastNode }: JsxEditorProps) {
 }
 
 // ── InsertJsxBridge ─────────────────────────────────────────────────────────
-// Renders nothing visible. Lives inside the toolbar so it has access to
-// MDXEditor's gurx context. Captures the insertJsx$ publisher into a ref so
-// the command-bar upload button (outside MDXEditor) can call it.
 type InsertJsxFn = (payload: { name: string; kind: 'flow' | 'text'; props: Record<string, string | boolean> }) => void;
 
 function InsertJsxBridge({ bridgeRef }: { bridgeRef: React.MutableRefObject<InsertJsxFn | null> }) {
@@ -130,19 +132,29 @@ function InsertJsxBridge({ bridgeRef }: { bridgeRef: React.MutableRefObject<Inse
   return null;
 }
 
-const today = new Date().toISOString().slice(0, 10);
+// ── Sidebar types ────────────────────────────────────────────────────────────
+interface SidebarMeta {
+  title:         string;
+  description:   string;
+  featuredImage: string;
+  tags:          string[];
+  status:        'draft' | 'published';
+  pubDate:       string; // YYYY-MM-DD
+}
 
-const INITIAL_MARKDOWN = `---
-title: "New Post"
-pubDate: ${today}
-description: ""
-tags: []
-featured: false
-draft: true
----
+const todayISO = new Date().toISOString().slice(0, 10);
 
-Start writing here...
-`;
+const EMPTY_META: SidebarMeta = {
+  title:         '',
+  description:   '',
+  featuredImage: '',
+  tags:          [],
+  status:        'draft',
+  pubDate:       todayISO,
+};
+
+// ── Editor constants ─────────────────────────────────────────────────────────
+const INITIAL_MARKDOWN = `Start writing here...`;
 
 // Override @mdxeditor/editor CSS custom properties for dark theme.
 const DARK_EDITOR_VARS = {
@@ -184,12 +196,10 @@ function stripBrokenImages(md: string): string {
 
 // Stable plugin list — defined outside the component so the array reference
 // never changes between renders, preventing MDXEditor from re-initialising.
-// Static plugins — no component-level refs needed.
 const STATIC_PLUGINS = [
   headingsPlugin(),
   listsPlugin(),
   quotePlugin(),
-  frontmatterPlugin(),
   codeBlockPlugin({
     defaultCodeBlockLanguage: 'ts',
     codeBlockEditorDescriptors: [
@@ -202,7 +212,6 @@ const STATIC_PLUGINS = [
       {
         name: 'Figure',
         kind: 'flow',
-        // No `source` — Figure is passed via components prop in [slug].astro.
         props: [
           { name: 'src',     type: 'string' },
           { name: 'alt',     type: 'string' },
@@ -224,10 +233,8 @@ interface Props {
 export default function BlogEditor({ slug: initialSlug = '' }: Props) {
   const editorRef    = useRef<MDXEditorMethods>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Captures insertJsx$ publisher from inside MDXEditor's context (see InsertJsxBridge).
   const insertJsxRef = useRef<InsertJsxFn | null>(null);
 
-  // Toolbar plugin is created per-instance because it closes over insertJsxRef.
   const plugins = useMemo(() => [
     ...STATIC_PLUGINS,
     toolbarPlugin({
@@ -245,24 +252,24 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
   ], []);
 
   const [editorKey, setEditorKey] = useState(0);
-  // seedMarkdown initialises the editor (passed as `markdown` prop, read once on mount).
-  // Never feed onChange output back into this — doing so would trigger MDXEditor's internal
-  // corePlugin.update which re-subscribes onChange and can cause subtle reset races.
   const [seedMarkdown, setSeedMarkdown] = useState(() => stripBrokenImages(INITIAL_MARKDOWN));
-  // latestMarkdown is updated synchronously via onChange; used for word-count and as the
-  // source of truth for Save. A ref (not state) avoids any React async-state lag.
   const latestMarkdownRef = useRef(stripBrokenImages(INITIAL_MARKDOWN));
   const [markdown, setMarkdown] = useState(() => stripBrokenImages(INITIAL_MARKDOWN));
   const [saving, setSaving] = useState(false);
-  const [imgUploading, setImgUploading] = useState(false);
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle');
   const [statusMsg, setStatusMsg] = useState('');
-  const [slug, setSlug] = useState(initialSlug || 'new-post');
+  const [slug, setSlug] = useState(initialSlug || '');
   const [loading, setLoading] = useState(Boolean(initialSlug));
+
+  // Sidebar state
+  const [meta, setMeta]               = useState<SidebarMeta>(EMPTY_META);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [tagInput, setTagInput]       = useState('');
+  const [imgUploading, setImgUploading] = useState(false);
 
   const handleChange = useCallback((md: string) => {
     latestMarkdownRef.current = md;
-    setMarkdown(md); // drives word-count display only
+    setMarkdown(md);
   }, []);
 
   // Load existing post content when a slug is provided
@@ -271,21 +278,30 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
     let cancelled = false;
     async function loadPost() {
       try {
-        // cache: 'no-store' prevents the browser returning a stale cached response
-        // when Astro's HMR reloads the page after a content-file write.
         const res = await fetch(
           `/api/admin/get-post?slug=${encodeURIComponent(initialSlug)}`,
           { cache: 'no-store' },
         );
         if (!res.ok) return;
-        const data = await res.json() as { content: string; slug: string };
+        const data = await res.json() as {
+          meta: SidebarMeta & { slug: string };
+          body: string;
+        };
         if (!cancelled) {
-          const clean = stripBrokenImages(data.content);
+          const clean = stripBrokenImages(data.body);
           latestMarkdownRef.current = clean;
           setSeedMarkdown(clean);
           setMarkdown(clean);
-          setSlug(data.slug);
-          setEditorKey(k => k + 1); // remount editor with loaded content
+          setSlug(data.meta.slug);
+          setMeta({
+            title:         data.meta.title,
+            description:   data.meta.description,
+            featuredImage: data.meta.featuredImage,
+            tags:          data.meta.tags,
+            status:        data.meta.status,
+            pubDate:       data.meta.pubDate,
+          });
+          setEditorKey(k => k + 1);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -299,12 +315,23 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
   const readingMins = Math.max(1, Math.ceil(words / 200));
 
   const handleSave = async () => {
-    // getMarkdown() reads the live Lexical/gurx state directly and will include content
-    // inserted via insertJsx$ (e.g. Figure nodes) that may not have fired onChange yet.
-    // Fall back to the ref if the editor is unmounted.
     const fromEditor = editorRef.current?.getMarkdown();
     const latest = fromEditor || latestMarkdownRef.current;
-    if (fromEditor) latestMarkdownRef.current = fromEditor; // keep ref in sync
+    if (fromEditor) latestMarkdownRef.current = fromEditor;
+
+    if (!meta.title.trim()) {
+      setStatus('error');
+      setStatusMsg('Title is required');
+      setTimeout(() => setStatus('idle'), 3000);
+      return;
+    }
+    if (!slug) {
+      setStatus('error');
+      setStatusMsg('Slug is required');
+      setTimeout(() => setStatus('idle'), 3000);
+      return;
+    }
+
     setSaving(true);
     setStatus('idle');
     setStatusMsg('');
@@ -312,11 +339,9 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
       const res = await fetch('/api/save-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ markdown: latest, slug }),
+        body: JSON.stringify({ meta: { ...meta, slug }, body: latest }),
       });
       if (res.ok) {
-        // Update seedMarkdown so that if Astro HMR remounts the editor, it initialises
-        // with the just-saved content instead of the originally-loaded content.
         setSeedMarkdown(latest);
         setStatus('saved');
       } else {
@@ -333,6 +358,48 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
     }
   };
 
+  // Auto-generate slug from title only for new posts (initialSlug is empty)
+  const handleTitleChange = (value: string) => {
+    setMeta(m => ({ ...m, title: value }));
+    if (!initialSlug) {
+      const generated = value
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-');
+      setSlug(generated || 'new-post');
+    }
+  };
+
+  const handleFeaturedImageUpload = async (file: File) => {
+    setImgUploading(true);
+    try {
+      const form = new FormData();
+      form.append('image', file);
+      const res = await fetch('/api/admin/upload-image', { method: 'POST', body: form });
+      const data = await res.json() as { url?: string; error?: string };
+      if (!res.ok || !data.url) throw new Error(data.error ?? 'Upload failed');
+      setMeta(m => ({ ...m, featuredImage: data.url! }));
+    } catch (err) {
+      alert(`Upload failed: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setImgUploading(false);
+    }
+  };
+
+  const addTag = (value: string) => {
+    const tag = value.trim().toLowerCase();
+    if (tag && !meta.tags.includes(tag)) {
+      setMeta(m => ({ ...m, tags: [...m.tags, tag] }));
+    }
+    setTagInput('');
+  };
+
+  const removeTag = (tag: string) => {
+    setMeta(m => ({ ...m, tags: m.tags.filter(t => t !== tag) }));
+  };
+
   const handleImageFile = async (file: File) => {
     setImgUploading(true);
     try {
@@ -342,8 +409,6 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
       const data = await res.json() as { url?: string; error?: string };
       if (!res.ok || !data.url) throw new Error(data.error ?? 'Upload failed');
 
-      // Use insertJsx$ (via the bridge ref) — the correct MDXEditor API for
-      // inserting JSX nodes. insertMarkdown() does not handle MDX JSX syntax.
       insertJsxRef.current?.({
         name: 'Figure',
         kind: 'flow',
@@ -419,7 +484,7 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
           </span>
         )}
 
-        {/* Hidden file input for image upload */}
+        {/* Hidden file input for body image upload */}
         <input
           ref={fileInputRef}
           type="file"
@@ -432,7 +497,7 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
           }}
         />
 
-        {/* Insert image button */}
+        {/* Insert image button (body) */}
         <button
           type="button"
           title={imgUploading ? 'Uploading…' : 'Insert image'}
@@ -454,6 +519,22 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
           )}
         </button>
 
+        {/* Sidebar toggle */}
+        <button
+          type="button"
+          title={sidebarOpen ? 'Hide metadata' : 'Show metadata'}
+          onClick={() => setSidebarOpen(o => !o)}
+          className={`flex items-center justify-center w-7 h-7 rounded transition-colors
+                      ${sidebarOpen
+                        ? 'text-zinc-100 bg-zinc-700'
+                        : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'}`}
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <path d="M15 3v18"/>
+          </svg>
+        </button>
+
         {/* Save button */}
         <button
           onClick={handleSave}
@@ -467,18 +548,188 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
         </button>
       </div>
 
-      {/* ── Editor area ───────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto px-6 py-10">
+      {/* ── Main area: editor + sidebar ─────────────────────────────── */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Editor */}
+        <div className="flex-1 overflow-y-auto">
           <MDXEditor
             key={editorKey}
             ref={editorRef}
             markdown={seedMarkdown}
             onChange={handleChange}
             plugins={plugins}
-            contentEditableClassName="prose prose-invert prose-zinc max-w-none min-h-[65vh] outline-none"
+            contentEditableClassName="prose prose-invert max-w-none px-8 py-8 min-h-screen
+                                       focus:outline-none text-zinc-200
+                                       prose-headings:text-zinc-100 prose-code:text-zinc-200
+                                       prose-a:text-blue-400"
           />
         </div>
+
+        {/* Sidebar */}
+        {sidebarOpen && (
+          <aside className="w-80 shrink-0 border-l border-zinc-800 bg-zinc-900 overflow-y-auto">
+            <div className="p-5 space-y-5">
+
+              {/* Title */}
+              <div>
+                <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
+                  Title
+                </label>
+                <input
+                  value={meta.title}
+                  onChange={e => handleTitleChange(e.target.value)}
+                  placeholder="Post title"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2
+                             text-sm text-zinc-100 placeholder:text-zinc-600
+                             focus:outline-none focus:ring-1 focus:ring-zinc-500 focus:border-zinc-500
+                             transition"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
+                  Description
+                </label>
+                <textarea
+                  value={meta.description}
+                  onChange={e => setMeta(m => ({ ...m, description: e.target.value }))}
+                  placeholder="Short summary for meta and previews"
+                  rows={3}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2
+                             text-sm text-zinc-100 placeholder:text-zinc-600 resize-none
+                             focus:outline-none focus:ring-1 focus:ring-zinc-500 focus:border-zinc-500
+                             transition"
+                />
+              </div>
+
+              {/* Featured Image */}
+              <div>
+                <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
+                  Featured Image
+                </label>
+                {meta.featuredImage && (
+                  <div className="relative mb-2">
+                    <img
+                      src={meta.featuredImage}
+                      alt="Featured"
+                      className="w-full rounded-lg border border-zinc-700 object-cover"
+                      style={{ maxHeight: 160, minHeight: 60, background: '#27272a' }}
+                      onError={e => {
+                        (e.currentTarget as HTMLImageElement).style.minHeight = '60px';
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setMeta(m => ({ ...m, featuredImage: '' }))}
+                      className="absolute top-1.5 right-1.5 w-5 h-5 rounded bg-zinc-900/80
+                                 text-zinc-400 hover:text-zinc-100 flex items-center justify-center text-xs"
+                      title="Remove image"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+                <label className={`flex items-center justify-center gap-2 w-full py-2 rounded-lg border
+                                   border-dashed border-zinc-700 text-[11px] text-zinc-500
+                                   hover:border-zinc-500 hover:text-zinc-400 cursor-pointer transition
+                                   ${imgUploading ? 'opacity-50 cursor-wait' : ''}`}>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                    className="hidden"
+                    disabled={imgUploading}
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFeaturedImageUpload(file);
+                      e.target.value = '';
+                    }}
+                  />
+                  {imgUploading ? 'Uploading…' : (meta.featuredImage ? 'Replace image' : 'Upload image')}
+                </label>
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
+                  Tags
+                </label>
+                {meta.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {meta.tags.map(tag => (
+                      <span key={tag} className="flex items-center gap-1 px-2 py-0.5 rounded-full
+                                                 bg-zinc-800 border border-zinc-700 text-[11px] text-zinc-300">
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => removeTag(tag)}
+                          className="text-zinc-500 hover:text-zinc-300 leading-none"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <input
+                  value={tagInput}
+                  onChange={e => setTagInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ',') {
+                      e.preventDefault();
+                      addTag(tagInput);
+                    }
+                  }}
+                  onBlur={() => { if (tagInput.trim()) addTag(tagInput); }}
+                  placeholder="Add tag, press Enter"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2
+                             text-sm text-zinc-100 placeholder:text-zinc-600
+                             focus:outline-none focus:ring-1 focus:ring-zinc-500 focus:border-zinc-500
+                             transition"
+                />
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
+                  Status
+                </label>
+                <div className="flex rounded-lg border border-zinc-700 overflow-hidden">
+                  {(['draft', 'published'] as const).map(s => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setMeta(m => ({ ...m, status: s }))}
+                      className={`flex-1 py-2 text-[11px] font-medium capitalize transition
+                                  ${meta.status === s
+                                    ? 'bg-zinc-700 text-zinc-100'
+                                    : 'bg-transparent text-zinc-500 hover:text-zinc-300'}`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Pub Date */}
+              <div>
+                <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
+                  Publish Date
+                </label>
+                <input
+                  type="date"
+                  value={meta.pubDate}
+                  onChange={e => setMeta(m => ({ ...m, pubDate: e.target.value }))}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2
+                             text-sm text-zinc-100
+                             focus:outline-none focus:ring-1 focus:ring-zinc-500 focus:border-zinc-500
+                             transition [color-scheme:dark]"
+                />
+              </div>
+
+            </div>
+          </aside>
+        )}
       </div>
     </div>
   );
