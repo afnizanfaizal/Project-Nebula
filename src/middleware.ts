@@ -4,18 +4,39 @@ import { defineMiddleware } from 'astro:middleware';
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
 
-  if (!pathname.startsWith('/admin')) {
+  const isAdminPage = pathname.startsWith('/admin');
+  const isAdminApi  =
+    pathname.startsWith('/api/admin/') ||
+    pathname === '/api/save-post';
+
+  // Public routes — no auth needed
+  if (!isAdminPage && !isAdminApi) return next();
+
+  // Allow the login page and the session endpoint without auth
+  if (
+    pathname === '/admin' ||
+    pathname === '/admin/' ||
+    pathname === '/api/auth/session'
+  ) {
     return next();
   }
 
-  // Allow the login page itself
-  if (pathname === '/admin' || pathname === '/admin/') {
-    return next();
+  const token = context.cookies.get('admin_session')?.value;
+  if (token) {
+    try {
+      // Dynamic import: avoids loading firebase-admin for every public page
+      const { isValidAdminToken } = await import('./lib/firebase-admin.js');
+      if (await isValidAdminToken(token)) return next();
+    } catch {
+      // Module load failure — fall through to redirect/401
+    }
   }
 
-  const cookie = context.cookies.get('admin_session');
-  if (cookie?.value === 'authenticated') {
-    return next();
+  if (isAdminApi) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   return context.redirect('/admin');
