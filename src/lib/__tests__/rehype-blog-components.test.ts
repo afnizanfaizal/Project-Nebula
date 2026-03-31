@@ -58,6 +58,15 @@ describe('rehypeBlogComponents', () => {
     expect(html).not.toContain('<figcaption>');
   });
 
+  it('does not swallow content that follows a <Figure>', async () => {
+    // parse5 treats <Figure> as a non-void block, capturing subsequent content as
+    // children of the element. The plugin must restore those children as siblings.
+    const html = await process('Before.\n\n<Figure src="/img.jpg" align="none" />\n\nAfter.');
+    expect(html).toContain('Before.');
+    expect(html).toContain('/img.jpg');
+    expect(html).toContain('After.');
+  });
+
   it('transforms <ZoomImage> with zoom-image class', async () => {
     const html = await process('<ZoomImage src="/photo.jpg" alt="A photo" />');
     expect(html).toContain('zoom-image');

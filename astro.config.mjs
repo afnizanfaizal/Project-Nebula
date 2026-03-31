@@ -49,10 +49,13 @@ export default defineConfig({
   vite: {
     plugins: [patchBrokenTransforms],
     ssr: {
-      // Firebase ships browser-only ESM; Vite must bundle every @firebase/* sub-package
-      // rather than externalize them, otherwise the EnvironmentPluginContainer transform
-      // chain crashes on SSR pages that transitively import firebase.ts.
-      noExternal: [/^firebase/, /^@firebase\//],
+      // firebase-admin is CJS and must be externalized so Node can load it natively.
+      external: ['firebase-admin', 'firebase-admin/app', 'firebase-admin/firestore'],
+      // The client-side Firebase SDK ships browser-only ESM; Vite must bundle every
+      // @firebase/* sub-package rather than externalize them, otherwise the
+      // EnvironmentPluginContainer transform chain crashes on SSR pages that
+      // transitively import firebase.ts.
+      noExternal: [/^@firebase\//, /^firebase(?!-admin)/],
     },
   },
   markdown: {

@@ -55,18 +55,25 @@ export function rehypeBlogComponents() {
 
       // ── Figure (custom — identified by presence of `src` attribute) ───
       // parse5 lowercases <Figure> → <figure>. Standard HTML <figure> never has a src attribute.
+      // IMPORTANT: parse5 treats <Figure .../> as a non-void block element, so it captures
+      // everything that follows (until </figure> or end of document) as children of the node.
+      // We must splice those swallowed children back out as siblings after our replacement.
       if (node.tagName === 'figure' && node.properties?.src) {
         const src     = String(node.properties.src ?? '');
         const alt     = String(node.properties.alt ?? '');
         const align   = String(node.properties.align ?? 'none');
         const caption = node.properties.caption ? String(node.properties.caption) : undefined;
 
-        parent.children[index] = el(
+        const newFigure = el(
           'figure',
           { className: `blog-figure figure-${align}` },
           el('img', { src, alt, loading: 'lazy' }),
           ...(caption ? [el('figcaption', {}, txt(caption))] : []),
         );
+
+        // Restore any children that parse5 incorrectly captured inside the <figure> tag
+        const swallowed = node.children ?? [];
+        parent.children.splice(index, 1, newFigure, ...swallowed);
         return;
       }
 
