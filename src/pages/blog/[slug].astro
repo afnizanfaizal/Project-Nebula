@@ -1,28 +1,41 @@
 ---
-export const prerender = true;
-import { getCollection, render } from 'astro:content';
+export const prerender = false;
 import PostLayout from '../../layouts/PostLayout.astro';
-import CodeBlock from '../../components/mdx/CodeBlock.astro';
-import Callout from '../../components/mdx/Callout.astro';
-import ZoomImage from '../../components/mdx/ZoomImage.astro';
-import Figure from '../../components/mdx/Figure.astro';
 import ViewCounter from '../../components/react/ViewCounter';
+import { getPost } from '../../lib/firebase-admin.js';
+import { renderMarkdown } from '../../lib/render-markdown.js';
 import { getReadingTime } from '../../lib/utils';
+import { Timestamp } from 'firebase-admin/firestore';
 
-export async function getStaticPaths() {
-  const posts = await getCollection('blog', ({ data }) => !data.draft);
-  return posts.map((entry) => ({
-    params: { slug: entry.id.replace(/\.mdx?$/, '') },
-    props: { entry },
-  }));
-}
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect('/404');
 
-const { entry } = Astro.props;
-const { Content, headings } = await render(entry);
-const slug = entry.id.replace(/\.mdx?$/, '');
-const minutesRead = getReadingTime(entry.body ?? '');
+const post = await getPost(slug);
+if (!post) return Astro.redirect('/404');
+
+// Hide drafts from public — admins bypass via direct URL awareness
+const isAdmin = Astro.cookies.get('admin_session')?.value === 'authenticated';
+if (post.draft && !isAdmin) return Astro.redirect('/404');
+
+const { html, headings } = await renderMarkdown(post.content ?? '');
+const minutesRead = getReadingTime(post.content ?? '');
+
+const pubDate = post.pubDate instanceof Timestamp ? post.pubDate.toDate() : new Date(post.pubDate as any);
+const updatedDate = post.updatedDate instanceof Timestamp ? post.updatedDate.toDate() : undefined;
 ---
-<PostLayout entry={entry} headings={headings} minutesRead={minutesRead}>
-  <ViewCounter slug={slug} client:idle slot="after-meta" />
-  <Content components={{ pre: CodeBlock, Callout, ZoomImage, Figure }} />
+<PostLayout
+  post={{
+    slug,
+    title:         post.title,
+    description:   post.description,
+    pubDate,
+    updatedDate,
+    tags:          post.tags ?? [],
+    featuredImage: post.featuredImage,
+  }}
+  headings={headings}
+  minutesRead={minutesRead}
+>
+  <ViewCounter slug={slug} client:only="react" slot="after-meta" />
+  <Fragment set:html={html} />
 </PostLayout>
