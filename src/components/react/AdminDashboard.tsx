@@ -1,6 +1,6 @@
 // src/components/react/AdminDashboard.tsx
 // Full-screen admin dashboard — sidebar + overview + posts management
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import {
   AreaChart,
@@ -11,8 +11,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { getPostViews } from '../../lib/firebase';
-
 // ── Types ────────────────────────────────────────────────────────────
 
 import type { ChartPoint, CountryEntry } from '../../lib/analytics-utils';
@@ -165,20 +163,20 @@ function KpiCard({
 
 function OverviewSection({
   posts,
-  postViews,
-  loadingViews,
+  viewsChart,
+  topCountries,
   totalViews,
   publishedCount,
   draftCount,
   featuredCount,
 }: {
-  posts: PostData[];
-  postViews: Record<string, number>;
-  loadingViews: boolean;
-  totalViews: number;
+  posts:          PostData[];
+  viewsChart:     ChartPoint[];
+  topCountries:   CountryEntry[];
+  totalViews:     number;
   publishedCount: number;
-  draftCount: number;
-  featuredCount: number;
+  draftCount:     number;
+  featuredCount:  number;
 }) {
   return (
     <div className="space-y-6 max-w-6xl">
@@ -186,8 +184,7 @@ function OverviewSection({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           label="Total Views"
-          value={loadingViews ? '' : totalViews.toLocaleString()}
-          loading={loadingViews}
+          value={totalViews.toLocaleString()}
           colorClass="bg-blue-500/10 text-blue-400"
           icon={<Icon.Eye />}
         />
@@ -220,9 +217,6 @@ function OverviewSection({
               <h2 className="text-sm font-semibold text-zinc-100">Page Views</h2>
               <p className="text-xs text-zinc-500 mt-0.5">Last 30 days</p>
             </div>
-            <span className="text-[10px] font-medium text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-              Sample data
-            </span>
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={viewsChart} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -268,27 +262,31 @@ function OverviewSection({
               <p className="text-xs text-zinc-500 mt-0.5">By visitors</p>
             </div>
           </div>
-          <div className="space-y-4">
-            {topCountries.map((c) => (
-              <div key={c.code}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm leading-none" aria-hidden="true">{c.flag}</span>
-                    <span className="text-xs text-zinc-300">{c.name}</span>
+          {topCountries.length === 0 ? (
+            <p className="text-xs text-zinc-500 mt-2">No visitor data yet.</p>
+          ) : (
+            <div className="space-y-4">
+              {topCountries.map((c) => (
+                <div key={c.code}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm leading-none" aria-hidden="true">{c.flag}</span>
+                      <span className="text-xs text-zinc-300">{c.name}</span>
+                    </div>
+                    <span className="text-xs text-zinc-500 font-mono tabular-nums">
+                      {c.views.toLocaleString()}
+                    </span>
                   </div>
-                  <span className="text-xs text-zinc-500 font-mono tabular-nums">
-                    {c.views.toLocaleString()}
-                  </span>
+                  <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 rounded-full transition-all duration-700"
+                      style={{ width: `${topCountries[0] ? (c.views / topCountries[0].views) * 100 : 0}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-500 rounded-full transition-all duration-700"
-                    style={{ width: `${topCountries[0] ? (c.views / topCountries[0].views) * 100 : 0}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -315,10 +313,7 @@ function OverviewSection({
                 </div>
                 <StatusBadge draft={post.draft} />
                 <span className="text-xs text-zinc-500 font-mono tabular-nums hidden sm:block w-16 text-right">
-                  {loadingViews
-                    ? <span className="inline-block w-8 h-2.5 bg-zinc-800 rounded animate-pulse" />
-                    : `${(postViews[post.slug] ?? 0).toLocaleString()} views`
-                  }
+                  {post.views.toLocaleString()} views
                 </span>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <a
@@ -351,13 +346,9 @@ function OverviewSection({
 
 function PostsSection({
   posts,
-  postViews,
-  loadingViews,
   onDeleteRequest,
 }: {
-  posts: PostData[];
-  postViews: Record<string, number>;
-  loadingViews: boolean;
+  posts:           PostData[];
   onDeleteRequest: (post: PostData) => void;
 }) {
   return (
@@ -440,13 +431,9 @@ function PostsSection({
                       </div>
                     </td>
                     <td className="px-3 py-4 text-right hidden sm:table-cell">
-                      {loadingViews ? (
-                        <span className="inline-block w-10 h-3 bg-zinc-800 rounded animate-pulse" />
-                      ) : (
-                        <span className="text-xs text-zinc-400 font-mono tabular-nums">
-                          {(postViews[post.slug] ?? 0).toLocaleString()}
-                        </span>
-                      )}
+                      <span className="text-xs text-zinc-400 font-mono tabular-nums">
+                        {post.views.toLocaleString()}
+                      </span>
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-1.5 justify-end">
@@ -496,39 +483,14 @@ export default function AdminDashboard({ posts: initialPosts, viewsChart, topCou
   const [section, setSection] = useState<'overview' | 'posts'>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [posts, setPosts] = useState(initialPosts);
-  const [postViews, setPostViews] = useState<Record<string, number>>({});
-  const [loadingViews, setLoadingViews] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<PostData | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [toast, setToast] = useState('');
 
-  // Fetch Firestore view counts for all posts
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      const results: Record<string, number> = {};
-      await Promise.all(
-        initialPosts.map(async (post) => {
-          try {
-            results[post.slug] = await getPostViews(post.slug);
-          } catch {
-            results[post.slug] = 0;
-          }
-        })
-      );
-      if (!cancelled) {
-        setPostViews(results);
-        setLoadingViews(false);
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, [initialPosts]);
-
   const totalViews = useMemo(
-    () => Object.values(postViews).reduce((a, b) => a + b, 0),
-    [postViews]
+    () => posts.reduce((a, p) => a + p.views, 0),
+    [posts]
   );
   const publishedCount = posts.filter((p) => !p.draft).length;
   const draftCount     = posts.filter((p) => p.draft).length;
@@ -695,8 +657,8 @@ export default function AdminDashboard({ posts: initialPosts, viewsChart, topCou
           {section === 'overview' && (
             <OverviewSection
               posts={posts}
-              postViews={postViews}
-              loadingViews={loadingViews}
+              viewsChart={viewsChart}
+              topCountries={topCountries}
               totalViews={totalViews}
               publishedCount={publishedCount}
               draftCount={draftCount}
@@ -706,8 +668,6 @@ export default function AdminDashboard({ posts: initialPosts, viewsChart, topCou
           {section === 'posts' && (
             <PostsSection
               posts={posts}
-              postViews={postViews}
-              loadingViews={loadingViews}
               onDeleteRequest={setDeleteTarget}
             />
           )}
