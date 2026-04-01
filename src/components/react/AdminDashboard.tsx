@@ -15,6 +15,8 @@ import { getPostViews } from '../../lib/firebase';
 
 // ── Types ────────────────────────────────────────────────────────────
 
+import type { ChartPoint, CountryEntry } from '../../lib/analytics-utils';
+
 export interface PostData {
   slug: string;
   title: string;
@@ -23,37 +25,14 @@ export interface PostData {
   tags: string[];
   description: string;
   featured: boolean;
+  views: number;
 }
 
 interface Props {
   posts: PostData[];
+  viewsChart: ChartPoint[];
+  topCountries: CountryEntry[];
 }
-
-// ── Mock analytics data (replace with real analytics API) ────────────
-
-const VIEWS_SEED = [
-  45, 62, 78, 55, 90, 123, 145, 134, 167, 189,
-  156, 178, 203, 221, 198, 234, 245, 189, 267, 289,
-  312, 298, 321, 345, 334, 367, 389, 412, 398, 445,
-];
-
-const VIEWS_DATA = VIEWS_SEED.map((v, i) => {
-  const d = new Date();
-  d.setDate(d.getDate() - (29 - i));
-  return {
-    date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    views: v,
-  };
-});
-
-const COUNTRY_DATA = [
-  { country: 'Malaysia',       flag: '🇲🇾', views: 3240 },
-  { country: 'Singapore',      flag: '🇸🇬', views: 1890 },
-  { country: 'Indonesia',      flag: '🇮🇩', views: 1420 },
-  { country: 'United States',  flag: '🇺🇸', views: 980  },
-  { country: 'United Kingdom', flag: '🇬🇧', views: 650  },
-];
-const MAX_COUNTRY = COUNTRY_DATA[0].views;
 
 // ── Inline SVG icons (Heroicons outline 24px) ────────────────────────
 
@@ -246,7 +225,7 @@ function OverviewSection({
             </span>
           </div>
           <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={VIEWS_DATA} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <AreaChart data={viewsChart} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.35} />
@@ -288,17 +267,14 @@ function OverviewSection({
               <h2 className="text-sm font-semibold text-zinc-100">Top Countries</h2>
               <p className="text-xs text-zinc-500 mt-0.5">By visitors</p>
             </div>
-            <span className="text-[10px] font-medium text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-              Sample data
-            </span>
           </div>
           <div className="space-y-4">
-            {COUNTRY_DATA.map((c) => (
-              <div key={c.country}>
+            {topCountries.map((c) => (
+              <div key={c.code}>
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2">
                     <span className="text-sm leading-none" aria-hidden="true">{c.flag}</span>
-                    <span className="text-xs text-zinc-300">{c.country}</span>
+                    <span className="text-xs text-zinc-300">{c.name}</span>
                   </div>
                   <span className="text-xs text-zinc-500 font-mono tabular-nums">
                     {c.views.toLocaleString()}
@@ -307,15 +283,12 @@ function OverviewSection({
                 <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-blue-500 rounded-full transition-all duration-700"
-                    style={{ width: `${(c.views / MAX_COUNTRY) * 100}%` }}
+                    style={{ width: `${topCountries[0] ? (c.views / topCountries[0].views) * 100 : 0}%` }}
                   />
                 </div>
               </div>
             ))}
           </div>
-          <p className="text-[10px] text-zinc-600 mt-4 leading-relaxed">
-            Connect Google Analytics or Plausible for real visitor data.
-          </p>
         </div>
       </div>
 
@@ -519,7 +492,7 @@ function PostsSection({
 
 // ── Main component ────────────────────────────────────────────────────
 
-export default function AdminDashboard({ posts: initialPosts }: Props) {
+export default function AdminDashboard({ posts: initialPosts, viewsChart, topCountries }: Props) {
   const [section, setSection] = useState<'overview' | 'posts'>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [posts, setPosts] = useState(initialPosts);

@@ -2,9 +2,18 @@
 export const prerender = false;
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import AdminDashboard from '../../components/react/AdminDashboard';
-import { listPosts } from '../../lib/firebase-admin.js';
+import { listPosts, getDailyAnalytics } from '../../lib/firebase-admin.js';
+import { buildDateRange, buildChartData, aggregateTopCountries } from '../../lib/analytics-utils.js';
 
-const postList = await listPosts();
+const [postList, analyticsMap] = await Promise.all([
+  listPosts(),
+  getDailyAnalytics(buildDateRange(30)),
+]);
+
+const dates      = buildDateRange(30);
+const viewsChart = buildChartData(analyticsMap, dates);
+const topCountries = aggregateTopCountries(analyticsMap, 5);
+
 const posts = postList.map((p) => ({
   slug:        p.slug,
   title:       p.title,
@@ -13,8 +22,14 @@ const posts = postList.map((p) => ({
   tags:        p.tags,
   description: p.description,
   featured:    p.featured,
+  views:       p.views,
 }));
 ---
 <AdminLayout title="Dashboard — Admin">
-  <AdminDashboard posts={posts} client:only="react" />
+  <AdminDashboard
+    posts={posts}
+    viewsChart={viewsChart}
+    topCountries={topCountries}
+    client:only="react"
+  />
 </AdminLayout>
