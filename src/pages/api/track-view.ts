@@ -14,6 +14,9 @@ export const POST: APIRoute = async ({ request }) => {
     if (!slug || typeof slug !== 'string') {
       return new Response(JSON.stringify({ error: 'slug required' }), { status: 400 });
     }
+    if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) {
+      return new Response(JSON.stringify({ error: 'invalid slug' }), { status: 400 });
+    }
   } catch {
     return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400 });
   }
@@ -24,6 +27,7 @@ export const POST: APIRoute = async ({ request }) => {
     request.headers.get('x-real-ip') ??
     '127.0.0.1';
 
+  // ip-api.com free tier is HTTP-only — intentional trade-off for a personal blog
   // Geo-lookup with 500ms timeout
   let countryCode = 'XX';
   try {
