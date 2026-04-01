@@ -64,17 +64,17 @@ export const POST: APIRoute = async ({ request }) => {
     // gRPC NOT_FOUND (code 5) — doc doesn't exist yet, create it
     if (err?.code === 5) {
       await dailyRef.set({
-        total:     1,
-        posts:     { [slug]: 1 },
-        countries: { [countryCode]: 1 },
-      });
+        total:     FieldValue.increment(1),
+        posts:     { [slug]: FieldValue.increment(1) },
+        countries: { [countryCode]: FieldValue.increment(1) },
+      }, { merge: true });
     } else {
       throw err;
     }
   }
 
   // Increment post view counter and read back the new total
-  await postRef.update({ views: FieldValue.increment(1) });
+  await postRef.set({ views: FieldValue.increment(1) }, { merge: true });
   const postSnap = await postRef.get();
   const views = (postSnap.data()?.views as number) ?? 1;
 
