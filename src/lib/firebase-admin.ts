@@ -46,14 +46,21 @@ export interface PostDocument {
 }
 
 export interface PostSummary {
-  slug:         string;
-  title:        string;
-  description:  string;
-  pubDate:      string;   // ISO date string
-  draft:        boolean;
-  featured:     boolean;
-  tags:         string[];
+  slug:          string;
+  title:         string;
+  description:   string;
+  pubDate:       string;   // ISO date string
+  draft:         boolean;
+  featured:      boolean;
+  tags:          string[];
   featuredImage?: string;
+  views:         number;
+}
+
+export interface DailyAnalytics {
+  total:     number;
+  posts:     Record<string, number>;
+  countries: Record<string, number>;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -108,6 +115,25 @@ export async function listPosts(): Promise<PostSummary[]> {
       featured:      d.featured ?? false,
       tags:          d.tags ?? [],
       featuredImage: d.featuredImage,
+      views:         d.views ?? 0,
     };
   });
+}
+
+/**
+ * Fetch multiple daily analytics documents by date key (YYYY-MM-DD).
+ * Returns a map of dateKey → DailyAnalytics (or null if the doc doesn't exist).
+ */
+export async function getDailyAnalytics(
+  dates: string[],
+): Promise<Record<string, DailyAnalytics | null>> {
+  if (dates.length === 0) return {};
+  const refs = dates.map((d) => adminDb.collection('analytics').doc(d));
+  const snaps = await adminDb.getAll(...refs);
+  const result: Record<string, DailyAnalytics | null> = {};
+  for (let i = 0; i < dates.length; i++) {
+    const snap = snaps[i];
+    result[dates[i]] = snap.exists ? (snap.data() as DailyAnalytics) : null;
+  }
+  return result;
 }
