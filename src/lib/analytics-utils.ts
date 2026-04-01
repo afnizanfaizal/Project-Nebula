@@ -74,10 +74,10 @@ export function buildChartData(
   dates: string[],
 ): ChartPoint[] {
   return dates.map((dateKey) => {
-    const [year, month, day] = dateKey.split('-').map(Number);
-    const label = new Date(year, month - 1, day).toLocaleDateString('en-US', {
+    const label = new Date(`${dateKey}T00:00:00Z`).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
+      timeZone: 'UTC',
     });
     return { date: label, views: docs[dateKey]?.total ?? 0 };
   });
