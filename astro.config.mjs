@@ -5,7 +5,7 @@ import react from '@astrojs/react';
 import mdx from '@astrojs/mdx';
 // @shikijs/rehype v4 only exports rehypeShiki as default, not as a named export
 import rehypeShiki from '@shikijs/rehype';
-import node from '@astrojs/node';
+import netlify from '@astrojs/netlify';
 
 /**
  * Vite 7 crashes when a plugin hook is an object whose `handler` is missing or
@@ -43,7 +43,7 @@ export default defineConfig({
   // 'hybrid' mode was removed in Astro 6. Using 'server' with explicit
   // `export const prerender = true` on all static pages is the Astro 6 equivalent.
   output: 'server',
-  adapter: node({ mode: 'standalone' }),
+  adapter: netlify(),
   integrations: [
     tailwind({ applyBaseStyles: false }),
     react(),
