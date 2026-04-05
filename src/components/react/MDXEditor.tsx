@@ -137,7 +137,8 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
 
   // Sidebar state
   const [meta, setMeta]               = useState<SidebarMeta>(EMPTY_META);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 640 : false);
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 640 : true);
   const [tagInput, setTagInput]       = useState('');
   const [imgUploading, setImgUploading] = useState(false);
   // Toast for inline upload errors (replaces native alert())
@@ -155,6 +156,13 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
   const showUploadError = useCallback((msg: string) => {
     setUploadError(msg);
     setTimeout(() => setUploadError(''), 4000);
+  }, []);
+
+  // Track mobile viewport for responsive sidebar behaviour
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
   }, []);
 
   const handleChange = useCallback((md: string) => {
@@ -454,179 +462,276 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
       style={DARK_EDITOR_VARS as React.CSSProperties}
     >
       {/* ── Command bar ───────────────────────────────────────────── */}
-      <div className="sticky top-0 z-40 flex items-center gap-3 px-5 h-12 border-b border-zinc-800 bg-zinc-900/95 backdrop-blur-sm">
-        {/* Back to dashboard */}
-        <a
-          href="/admin/dashboard?tab=posts"
-          className="flex items-center gap-1 text-zinc-600 hover:text-zinc-400 transition-colors mr-1"
-          aria-label="Back to dashboard"
-          title="Dashboard"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-          </svg>
-        </a>
-
-        {/* File path */}
-        <span className="text-zinc-600 text-[11px] font-mono select-none">posts/</span>
-        <input
-          value={slug}
-          onChange={(e) =>
-            setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-'))
-          }
-          className="w-44 bg-transparent text-zinc-300 text-[11px] font-mono outline-none
-                     border-b border-transparent hover:border-zinc-700 focus:border-zinc-500
-                     pb-px transition-colors placeholder:text-zinc-600"
-          placeholder="post-slug"
-          spellCheck={false}
-        />
-        <span className="text-zinc-600 text-[11px] font-mono select-none">.mdx</span>
-
-        <div className="flex-1" />
-
-        {/* Stats */}
-        <span className="text-[11px] text-zinc-600 font-mono tabular-nums select-none">
-          {words.toLocaleString()} w · {readingMins} min
-        </span>
-
-        {/* Status feedback */}
-        {autosaveStatus && !saving && status === 'idle' && (
-          <span className="text-[10px] text-zinc-500 font-mono animate-in fade-in duration-500">
-            {autosaveStatus}
-          </span>
-        )}
-
-        {status === 'saved' && (
-          <span className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            Saved
-          </span>
-        )}
-        {status === 'error' && (
-          <span className="flex items-center gap-1.5 text-[11px] text-red-400 font-medium" title={statusMsg}>
-            <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-            {statusMsg ? `Failed: ${statusMsg}` : 'Failed'}
-          </span>
-        )}
-
-        {/* Hidden file input for body image upload */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml,application/pdf"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleImageFile(file);
-            e.target.value = '';
-          }}
-        />
-
-        {/* Insert image button */}
-        <button
-          type="button"
-          title={imgUploading ? 'Uploading…' : 'Upload media (Images & PDFs)'}
-          disabled={imgUploading}
-          onClick={() => fileInputRef.current?.click()}
-          className="flex items-center justify-center w-7 h-7 rounded text-zinc-400
-                     hover:text-zinc-100 hover:bg-zinc-800 transition-colors
-                     disabled:opacity-40 disabled:cursor-wait"
-        >
-          {imgUploading ? (
-            <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
-              <circle cx="12" cy="12" r="10" strokeOpacity={0.25} />
-              <path d="M12 2a10 10 0 0 1 10 10" />
+      <div className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-900/95 backdrop-blur-sm">
+        {/* Primary row — always visible */}
+        <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 h-12">
+          {/* Back to dashboard */}
+          <a
+            href="/admin/dashboard?tab=posts"
+            className="flex items-center justify-center w-9 h-9 sm:w-auto sm:h-auto gap-1 text-zinc-600 hover:text-zinc-400 transition-colors shrink-0"
+            aria-label="Back to dashboard"
+            title="Dashboard"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
             </svg>
-          ) : (
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M2.25 15.75 7.409 10.59a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 19.5h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
-            </svg>
+          </a>
+
+          {/* File path */}
+          <span className="hidden sm:inline text-zinc-600 text-[11px] font-mono select-none">posts/</span>
+          <input
+            value={slug}
+            onChange={(e) =>
+              setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-'))
+            }
+            className="w-28 sm:w-44 bg-transparent text-zinc-300 text-[11px] font-mono outline-none
+                       border-b border-transparent hover:border-zinc-700 focus:border-zinc-500
+                       pb-px transition-colors placeholder:text-zinc-600"
+            placeholder="post-slug"
+            spellCheck={false}
+          />
+          <span className="hidden sm:inline text-zinc-600 text-[11px] font-mono select-none">.mdx</span>
+
+          <div className="flex-1" />
+
+          {/* Desktop: Stats */}
+          <span className="hidden sm:inline text-[11px] text-zinc-600 font-mono tabular-nums select-none">
+            {words.toLocaleString()} w · {readingMins} min
+          </span>
+
+          {/* Desktop: Autosave status */}
+          {autosaveStatus && !saving && status === 'idle' && (
+            <span className="hidden sm:inline text-[10px] text-zinc-500 font-mono animate-in fade-in duration-500">
+              {autosaveStatus}
+            </span>
           )}
-        </button>
 
-        {/* Browse Media button */}
-        <button
-          type="button"
-          title="Browse Media Library"
-          onClick={() => setShowMediaBrowser(true)}
-          className="flex items-center justify-center w-7 h-7 rounded text-zinc-400
-                     hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V9.776Z" />
-          </svg>
-        </button>
+          {/* Status feedback */}
+          {status === 'saved' && (
+            <span className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span className="hidden sm:inline">Saved</span>
+            </span>
+          )}
+          {status === 'error' && (
+            <span className="flex items-center gap-1.5 text-[11px] text-red-400 font-medium" title={statusMsg}>
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+              <span className="hidden sm:inline">{statusMsg ? `Failed: ${statusMsg}` : 'Failed'}</span>
+            </span>
+          )}
 
-        {/* Upload error toast */}
-        {uploadError && (
-          <span className="flex items-center gap-1.5 text-[11px] text-red-400 font-medium" title={uploadError}>
-            <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-            {uploadError}
-          </span>
-        )}
+          {/* Hidden file input for body image upload */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml,application/pdf"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleImageFile(file);
+              e.target.value = '';
+            }}
+          />
 
-        {/* Re-align last image button */}
-        {lastUploadedUrl && (
+          {/* Desktop: Insert image button */}
           <button
             type="button"
-            title="Re-align the last uploaded image"
-            onClick={() => {
-              setPendingImgUrl(lastUploadedUrl);
-              setShowAlignModal(true);
-            }}
-            className="flex items-center justify-center h-8 px-3 rounded-md bg-zinc-800/80 border border-zinc-700
-                       text-zinc-300 hover:text-white hover:bg-zinc-700 hover:border-zinc-500
-                       transition-all text-[11px] font-medium"
+            title={imgUploading ? 'Uploading…' : 'Upload media (Images & PDFs)'}
+            disabled={imgUploading}
+            onClick={() => fileInputRef.current?.click()}
+            className="hidden sm:flex items-center justify-center w-7 h-7 rounded text-zinc-400
+                       hover:text-zinc-100 hover:bg-zinc-800 transition-colors
+                       disabled:opacity-40 disabled:cursor-wait"
           >
-            <svg className="w-3.5 h-3.5 mr-1.5 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3" />
-            </svg>
-            Re-align Last
+            {imgUploading ? (
+              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                <circle cx="12" cy="12" r="10" strokeOpacity={0.25} />
+                <path d="M12 2a10 10 0 0 1 10 10" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2.25 15.75 7.409 10.59a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 19.5h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+              </svg>
+            )}
           </button>
-        )}
 
-        {/* Sidebar toggle */}
-        <button
-          type="button"
-          title={sidebarOpen ? 'Hide metadata' : 'Show metadata'}
-          onClick={() => setSidebarOpen(o => !o)}
-          className={`flex items-center justify-center w-7 h-7 rounded transition-colors
-                      ${sidebarOpen
-                        ? 'text-zinc-100 bg-zinc-700'
-                        : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'}`}
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2"/>
-            <path d="M15 3v18"/>
-          </svg>
-        </button>
+          {/* Desktop: Browse Media button */}
+          <button
+            type="button"
+            title="Browse Media Library"
+            onClick={() => setShowMediaBrowser(true)}
+            className="hidden sm:flex items-center justify-center w-7 h-7 rounded text-zinc-400
+                       hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V9.776Z" />
+            </svg>
+          </button>
 
-        {/* Preview button */}
-        <button
-          type="button"
-          onClick={handlePreview}
-          className="flex items-center gap-1.5 px-3 py-1 rounded bg-zinc-800 border border-zinc-700
-                     text-zinc-300 text-[11px] font-semibold hover:text-white hover:bg-zinc-700
-                     hover:border-zinc-600 transition-all active:scale-[0.98]"
-        >
-          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178Z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-          </svg>
-          Preview
-        </button>
+          {/* Desktop: Upload error toast */}
+          {uploadError && (
+            <span className="hidden sm:flex items-center gap-1.5 text-[11px] text-red-400 font-medium" title={uploadError}>
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+              {uploadError}
+            </span>
+          )}
 
-        {/* Save button */}
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          type="button"
-          className="px-3.5 py-1 rounded bg-zinc-100 text-zinc-900 text-[11px] font-semibold
-                     tracking-wide hover:bg-white active:bg-zinc-200
-                     disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-        >
-          {saving ? 'Saving…' : 'Save Post'}
-        </button>
+          {/* Desktop: Re-align last image button */}
+          {lastUploadedUrl && (
+            <button
+              type="button"
+              title="Re-align the last uploaded image"
+              onClick={() => {
+                setPendingImgUrl(lastUploadedUrl);
+                setShowAlignModal(true);
+              }}
+              className="hidden sm:flex items-center justify-center h-8 px-3 rounded-md bg-zinc-800/80 border border-zinc-700
+                         text-zinc-300 hover:text-white hover:bg-zinc-700 hover:border-zinc-500
+                         transition-all text-[11px] font-medium"
+            >
+              <svg className="w-3.5 h-3.5 mr-1.5 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3" />
+              </svg>
+              Re-align Last
+            </button>
+          )}
+
+          {/* Desktop: Sidebar toggle */}
+          <button
+            type="button"
+            title={sidebarOpen ? 'Hide metadata' : 'Show metadata'}
+            onClick={() => setSidebarOpen(o => !o)}
+            className={`hidden sm:flex items-center justify-center w-7 h-7 rounded transition-colors
+                        ${sidebarOpen
+                          ? 'text-zinc-100 bg-zinc-700'
+                          : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'}`}
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M15 3v18"/>
+            </svg>
+          </button>
+
+          {/* Desktop: Preview button */}
+          <button
+            type="button"
+            onClick={handlePreview}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded bg-zinc-800 border border-zinc-700
+                       text-zinc-300 text-[11px] font-semibold hover:text-white hover:bg-zinc-700
+                       hover:border-zinc-600 transition-all active:scale-[0.98]"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+            </svg>
+            Preview
+          </button>
+
+          {/* Save button — always visible */}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            type="button"
+            className="px-3.5 py-1.5 sm:py-1 rounded bg-zinc-100 text-zinc-900 text-[11px] font-semibold
+                       tracking-wide hover:bg-white active:bg-zinc-200
+                       disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {saving ? 'Saving…' : 'Save Post'}
+          </button>
+        </div>
+
+        {/* Secondary row — mobile only action strip */}
+        <div className="sm:hidden flex items-center px-3 h-11 border-t border-zinc-800/60 gap-0.5">
+          {/* Stats */}
+          <span className="text-[11px] text-zinc-600 font-mono tabular-nums select-none">
+            {words.toLocaleString()} w · {readingMins} min
+          </span>
+
+          {/* Mobile autosave */}
+          {autosaveStatus && !saving && status === 'idle' && (
+            <span className="text-[10px] text-zinc-500 font-mono animate-in fade-in duration-500 ml-1.5 truncate max-w-[90px]">
+              · {autosaveStatus}
+            </span>
+          )}
+
+          {/* Mobile upload error */}
+          {uploadError && (
+            <span className="flex items-center gap-1 text-[10px] text-red-400 ml-1.5">
+              <span className="w-1 h-1 rounded-full bg-red-400 shrink-0" />
+              Upload failed
+            </span>
+          )}
+
+          <div className="flex-1" />
+
+          {/* Mobile: Image upload */}
+          <button
+            type="button"
+            title={imgUploading ? 'Uploading…' : 'Upload media'}
+            disabled={imgUploading}
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center justify-center w-11 h-11 rounded-lg text-zinc-400
+                       active:bg-zinc-800 active:text-zinc-100 transition-colors disabled:opacity-40 disabled:cursor-wait"
+            style={{ touchAction: 'manipulation' }}
+          >
+            {imgUploading ? (
+              <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                <circle cx="12" cy="12" r="10" strokeOpacity={0.25} />
+                <path d="M12 2a10 10 0 0 1 10 10" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2.25 15.75 7.409 10.59a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M3.75 19.5h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+              </svg>
+            )}
+          </button>
+
+          {/* Mobile: Browse Media */}
+          <button
+            type="button"
+            title="Browse Media Library"
+            onClick={() => setShowMediaBrowser(true)}
+            className="flex items-center justify-center w-11 h-11 rounded-lg text-zinc-400
+                       active:bg-zinc-800 active:text-zinc-100 transition-colors"
+            style={{ touchAction: 'manipulation' }}
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V9.776Z" />
+            </svg>
+          </button>
+
+          {/* Mobile: Preview */}
+          <button
+            type="button"
+            onClick={handlePreview}
+            title="Preview post"
+            className="flex items-center justify-center w-11 h-11 rounded-lg text-zinc-400
+                       active:bg-zinc-800 active:text-zinc-100 transition-colors"
+            style={{ touchAction: 'manipulation' }}
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+            </svg>
+          </button>
+
+          {/* Mobile: Post settings toggle */}
+          <button
+            type="button"
+            title={sidebarOpen ? 'Hide post settings' : 'Post settings'}
+            onClick={() => setSidebarOpen(o => !o)}
+            className={`flex items-center justify-center w-11 h-11 rounded-lg transition-colors
+                        ${sidebarOpen
+                          ? 'text-zinc-100 bg-zinc-700'
+                          : 'text-zinc-400 active:bg-zinc-800 active:text-zinc-100'}`}
+            style={{ touchAction: 'manipulation' }}
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M15 3v18"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* ── Main area: editor + sidebar ─────────────────────────────── */}
@@ -645,7 +750,7 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
             onChange={handleChange}
             plugins={plugins}
             onError={(msg) => console.error('[MDXEditor Error]', msg)}
-            contentEditableClassName="prose prose-invert max-w-none px-8 py-8 min-h-screen
+            contentEditableClassName="prose prose-invert max-w-none px-4 sm:px-8 py-6 sm:py-8 min-h-screen
                                        focus:outline-none text-zinc-200
                                        prose-headings:text-zinc-100 prose-code:text-zinc-200
                                        prose-a:text-blue-400"
@@ -654,8 +759,43 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
 
         {/* Sidebar */}
         {sidebarOpen && (
-          <aside className="w-80 shrink-0 border-l border-zinc-800 bg-zinc-900 overflow-y-auto">
-            <div className="p-5 space-y-5">
+          <>
+            {/* Mobile backdrop */}
+            {isMobile && (
+              <div
+                className="fixed inset-0 z-40 bg-zinc-950/70 backdrop-blur-sm"
+                onClick={() => setSidebarOpen(false)}
+              />
+            )}
+            <aside
+              className={isMobile
+                ? 'fixed bottom-0 left-0 right-0 z-50 bg-zinc-900 border-t border-zinc-800 rounded-t-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300'
+                : 'w-80 shrink-0 border-l border-zinc-800 bg-zinc-900 overflow-y-auto'
+              }
+              style={isMobile ? { maxHeight: '85dvh' } : undefined}
+            >
+              {/* Mobile: drag handle + header */}
+              {isMobile && (
+                <div className="flex-shrink-0 border-b border-zinc-800">
+                  <div className="flex justify-center pt-2.5 pb-1">
+                    <div className="w-10 h-1 rounded-full bg-zinc-700" />
+                  </div>
+                  <div className="flex items-center justify-between px-5 py-2">
+                    <span className="text-sm font-semibold text-zinc-200">Post Settings</span>
+                    <button
+                      type="button"
+                      onClick={() => setSidebarOpen(false)}
+                      className="flex items-center justify-center w-9 h-9 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+                      style={{ touchAction: 'manipulation' }}
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div className="p-5 space-y-5 overflow-y-auto flex-1">
 
               {/* Title */}
               <div>
@@ -874,7 +1014,8 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
               </div>
 
             </div>
-          </aside>
+            </aside>
+          </>
         )}
       </div>
 
