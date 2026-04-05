@@ -2,6 +2,7 @@
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
+import { getStorage } from 'firebase-admin/storage';
 
 const apps = getApps();
 const app = apps.length === 0
@@ -11,19 +12,23 @@ const app = apps.length === 0
         clientEmail: import.meta.env.FIREBASE_CLIENT_EMAIL,
         privateKey:  import.meta.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
       }),
+      storageBucket: import.meta.env.PUBLIC_FIREBASE_STORAGE_BUCKET,
     })
   : apps[0];
 
 export const adminDb = getFirestore(app);
 export const adminAuth = getAuth(app);
+export const adminStorage = getStorage(app);
 
 /**
- * Returns true if the given cookie value is a valid, non-expired Firebase ID token.
+ * Returns true if the given cookie value is a valid, non-expired, non-revoked
+ * Firebase session cookie. checkRevoked=true ensures revoked sessions are
+ * rejected even if the cookie hasn't expired yet.
  */
 export async function isValidAdminToken(token: string | undefined): Promise<boolean> {
   if (!token) return false;
   try {
-    await adminAuth.verifyIdToken(token);
+    await adminAuth.verifySessionCookie(token, /* checkRevoked */ true);
     return true;
   } catch {
     return false;
@@ -40,6 +45,7 @@ export interface PostDocument {
   tags:          string[];
   draft?:        boolean;
   featured?:     boolean;
+  isProject?:    boolean;
   featuredImage?: string;
   content:       string;
   views?:        number;
@@ -52,6 +58,7 @@ export interface PostSummary {
   pubDate:       string;   // ISO date string
   draft:         boolean;
   featured:      boolean;
+  isProject:     boolean;
   tags:          string[];
   featuredImage?: string;
   views:         number;
@@ -113,11 +120,44 @@ export async function listPosts(): Promise<PostSummary[]> {
                        : String(d.pubDate),
       draft:         d.draft ?? false,
       featured:      d.featured ?? false,
+      isProject:     d.isProject ?? false,
       tags:          d.tags ?? [],
       featuredImage: d.featuredImage,
       views:         d.views ?? 0,
     };
   });
+}
+
+// ── Site Profile ──────────────────────────────────────────────────────────
+
+export interface ProfileDocument {
+  name:         string;
+  title:        string;
+  bio:          string;
+  profilePhoto: string;
+  skills:       string[];
+}
+
+/**
+ * Fetch the site profile from `site/profile`.
+ * Returns a default empty profile if the document doesn't exist.
+ */
+export async function getProfile(): Promise<ProfileDocument> {
+  const snap = await adminDb.collection('site').doc('profile').get();
+  if (!snap.exists) {
+    return {
+      name: '', title: '', bio: '',
+      profilePhoto: '', skills: [],
+    };
+  }
+  return snap.data() as ProfileDocument;
+}
+
+/**
+ * Save (merge) the site profile into `site/profile`.
+ */
+export async function saveProfile(data: Partial<ProfileDocument>): Promise<void> {
+  await adminDb.collection('site').doc('profile').set(data, { merge: true });
 }
 
 /**

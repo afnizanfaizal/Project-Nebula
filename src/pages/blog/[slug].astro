@@ -13,8 +13,9 @@ if (!slug) return Astro.redirect('/404');
 const post = await getPost(slug);
 if (!post) return Astro.redirect('/404');
 
-// Hide drafts from public — admins bypass via direct URL awareness
-const isAdmin = Astro.cookies.get('admin_session')?.value === 'authenticated';
+// Hide drafts from public — admins bypass via session token
+const { isValidAdminToken } = await import('../../lib/firebase-admin.js');
+const isAdmin = await isValidAdminToken(Astro.cookies.get('admin_session')?.value);
 if (post.draft && !isAdmin) return Astro.redirect('/404');
 
 const { html, headings } = await renderMarkdown(post.content ?? '');
@@ -32,6 +33,7 @@ const updatedDate = post.updatedDate instanceof Timestamp ? post.updatedDate.toD
     updatedDate,
     tags:          post.tags ?? [],
     featuredImage: post.featuredImage,
+    isProject:     post.isProject || (post.tags ?? []).some(t => t.toLowerCase() === 'project'),
   }}
   headings={headings}
   minutesRead={minutesRead}

@@ -34,6 +34,8 @@ export const GET: APIRoute = async ({ url }) => {
       featuredImage: post.featuredImage ?? '',
       tags:          post.tags ?? [],
       status:        post.draft ? 'draft' : 'published',
+      featured:      post.featured ?? false,
+      isProject:     post.isProject ?? false,
       pubDate,
     },
     body: post.content ?? '',

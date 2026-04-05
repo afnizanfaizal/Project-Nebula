@@ -1,60 +1,415 @@
 ---
-export const prerender = true;
-import { getCollection } from 'astro:content';
+export const prerender = false;
+import FeaturedCarousel from '../components/react/FeaturedCarousel';
+import { listPosts } from '../lib/firebase-admin.js';
 import Layout from '../layouts/Layout.astro';
 
-const featuredPosts = (await getCollection('blog', ({ data }) => !data.draft && data.featured))
-  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
-  .slice(0, 3);
----
-<Layout title="Dr. Afnizanfaizal — AI Innovation & Tech Leader">
-  <!-- Hero -->
-  <section class="mx-auto max-w-3xl px-6 pt-24 pb-16">
-    <div class="max-w-2xl">
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-600 mb-4">
-        AI Innovation · Tech Leadership · Research
-      </p>
-      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1] text-zinc-900 dark:text-zinc-100">
-        Dr. Afnizanfaizal
-      </h1>
-      <p class="mt-5 text-xl text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-xl">
-        Building intelligent systems at the frontier of AI. Writing about research, engineering, and the future of technology.
-      </p>
-      <div class="mt-8 flex flex-wrap gap-3">
-        <a href="/blog" class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-medium hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors">
-          Read the Blog
-        </a>
-        <a href="/projects" class="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-sm font-medium hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors">
-          View Projects
-        </a>
-      </div>
-    </div>
-  </section>
+const allPosts = await listPosts();
+const publishedPosts = allPosts.filter(p => 
+  !p.draft && 
+  !p.isProject && 
+  !p.tags.some((t: string) => t.toLowerCase() === 'project')
+);
 
-  <!-- Featured Posts -->
-  {featuredPosts.length > 0 && (
-    <section class="mx-auto max-w-3xl px-6 py-8 border-t border-zinc-100 dark:border-zinc-900" id="about">
-      <h2 class="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-600 mb-6">
-        Featured Writing
-      </h2>
-      <div class="space-y-px">
-        {featuredPosts.map((post) => {
-          const slug = post.id.replace(/\.mdx?$/, '');
-          return (
-            <a href={`/blog/${slug}`} class="group flex items-baseline justify-between gap-4 py-4 border-b border-zinc-100 dark:border-zinc-900 hover:border-zinc-200 dark:hover:border-zinc-800 transition-colors">
-              <h3 class="text-base font-medium text-zinc-900 dark:text-zinc-100 group-hover:text-zinc-600 dark:group-hover:text-zinc-400 transition-colors leading-snug">
-                {post.data.title}
-              </h3>
-              <time datetime={post.data.pubDate.toISOString()} class="shrink-0 text-sm text-zinc-400 dark:text-zinc-600 tabular-nums">
-                {new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(post.data.pubDate)}
-              </time>
-            </a>
-          );
-        })}
-      </div>
-      <a href="/blog" class="inline-block mt-6 text-sm text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors">
-        All posts →
-      </a>
-    </section>
-  )}
+// Get all featured posts, or fallback to the most recent post if none are featured
+const featuredPosts = publishedPosts.filter(p => p.featured);
+if (featuredPosts.length === 0 && publishedPosts.length > 0) {
+  featuredPosts.push(publishedPosts[0]);
+}
+
+const featuredSlugs = new Set(featuredPosts.map(p => p.slug));
+const recentPosts = publishedPosts.filter(p => !featuredSlugs.has(p.slug));
+
+function timeAgo(dateStr: string): string {
+  const date = new Date(dateStr);
+  const diff = Date.now() - date.getTime();
+  const h = Math.floor(diff / 3600000);
+  const d = Math.floor(diff / 86400000);
+  const mo = Math.floor(d / 30);
+  if (h < 1) return 'Just now';
+  if (h < 24) return `${h}h ago`;
+  if (d < 30) return `${d}d ago`;
+  if (mo < 12) return `${mo}mo ago`;
+  return new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(date);
+}
+
+const POSTS_PER_PAGE = 6;
+const initialPosts = recentPosts.slice(0, POSTS_PER_PAGE);
+const hasMorePages = recentPosts.length > POSTS_PER_PAGE;
+---
+
+<Layout title="Dr. Afnizanfaizal — AI Innovation & Tech Leader">
+  <!-- Page-level dark cinematic background -->
+  <div class="relative min-h-dvh bg-[#050508]">
+
+    <!-- Ambient glow orbs -->
+    <div aria-hidden="true" class="pointer-events-none absolute -top-40 -left-48 h-[600px] w-[600px] rounded-full bg-indigo-700/20 blur-[130px]"></div>
+    <div aria-hidden="true" class="pointer-events-none absolute top-1/2 -right-60 h-[500px] w-[500px] rounded-full bg-purple-700/[0.12] blur-[110px]"></div>
+    <div aria-hidden="true" class="pointer-events-none absolute bottom-0 left-1/3 h-[400px] w-[400px] rounded-full bg-blue-600/[0.08] blur-[100px]"></div>
+
+    <div class="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+
+      <!-- ── Featured Post Hero ─────────────────────────────────────── -->
+      <FeaturedCarousel posts={featuredPosts} client:load />
+
+      <!-- ── Recent Posts ───────────────────────────────────────────── -->
+      {recentPosts.length > 0 && (
+        <section id="recent-section" aria-label="Recent posts">
+          <!-- Header + Search -->
+          <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 class="text-xl font-semibold text-white">Recent Posts</h2>
+              <p class="mt-0.5 text-sm text-white/35" id="posts-count">
+                {recentPosts.length} {recentPosts.length === 1 ? 'post' : 'posts'}
+              </p>
+            </div>
+
+            <!-- Search input -->
+            <div class="relative">
+              <svg
+                class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input
+                id="search-input"
+                type="text"
+                placeholder="Search posts…"
+                aria-label="Search posts by title, description or tag"
+                class="w-full rounded-xl border border-white/10 bg-white/[0.06] py-2.5 pl-10 pr-4 text-sm text-white placeholder-white/30 backdrop-blur-sm transition-all focus:border-indigo-500/50 focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-indigo-500/30 sm:w-64"
+              />
+            </div>
+          </div>
+
+          <!-- Posts grid (server-rendered initial state) -->
+          <div
+            id="posts-grid"
+            class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+          >
+            {initialPosts.map(post => (
+              <a
+                href={`/blog/${post.slug}`}
+                class="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.05] backdrop-blur-sm transition-all duration-300 hover:border-white/20 hover:bg-white/[0.09] hover:shadow-xl hover:shadow-indigo-500/[0.08]"
+              >
+                <!-- Thumbnail -->
+                <div class="relative aspect-video overflow-hidden">
+                  {post.featuredImage ? (
+                    <img
+                      src={post.featuredImage}
+                      alt={post.title}
+                      class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-900/60 via-purple-900/50 to-slate-900/60">
+                      <svg class="h-10 w-10 text-white/10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/>
+                      </svg>
+                    </div>
+                  )}
+                  <!-- Subtle bottom fade -->
+                  <div class="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[#050508]/80 to-transparent"></div>
+                </div>
+
+                <!-- Card content -->
+                <div class="flex flex-1 flex-col p-5">
+                  <!-- Tags -->
+                  {post.tags.length > 0 && (
+                    <div class="mb-3 flex flex-wrap gap-1.5">
+                      {post.tags.slice(0, 2).map(tag => (
+                        <span class="rounded-md border border-indigo-500/20 bg-indigo-500/10 px-2 py-0.5 text-xs text-indigo-300">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <!-- Title -->
+                  <h3 class="mb-2 line-clamp-2 text-base font-semibold leading-snug text-white transition-colors group-hover:text-indigo-200">
+                    {post.title}
+                  </h3>
+
+                  <!-- Description -->
+                  {post.description && (
+                    <p class="mb-4 line-clamp-2 flex-1 text-sm leading-relaxed text-white/45">
+                      {post.description}
+                    </p>
+                  )}
+
+                  <!-- Footer row -->
+                  <div class="mt-auto flex items-center justify-between border-t border-white/[0.07] pt-3">
+                    <time datetime={post.pubDate} class="text-xs text-white/30">
+                      {timeAgo(post.pubDate)}
+                    </time>
+                    <svg
+                      class="h-4 w-4 text-white/25 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-indigo-400"
+                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                    >
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+
+          <!-- Empty search state -->
+          <div id="empty-state" class="hidden py-20 text-center">
+            <svg class="mx-auto mb-4 h-12 w-12 text-white/10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <p class="text-base text-white/30">No posts match your search</p>
+            <button
+              id="clear-search"
+              class="mt-4 cursor-pointer rounded-lg px-4 py-2 text-sm text-indigo-400 transition-colors hover:text-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+            >
+              Clear search
+            </button>
+          </div>
+
+          <!-- Pagination -->
+          <div
+            id="pagination"
+            class={`mt-10 flex items-center justify-center gap-2 ${hasMorePages ? '' : 'hidden'}`}
+            aria-label="Post pagination"
+          >
+            <button
+              id="prev-btn"
+              disabled
+              aria-label="Previous page"
+              class="rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2 text-sm text-white/50 backdrop-blur-sm transition-all hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              ← Prev
+            </button>
+            <div id="page-numbers" class="flex gap-1.5" role="list"></div>
+            <button
+              id="next-btn"
+              aria-label="Next page"
+              class="rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2 text-sm text-white/50 backdrop-blur-sm transition-all hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+            >
+              Next →
+            </button>
+          </div>
+        </section>
+      )}
+
+    </div><!-- /max-w-7xl -->
+  </div><!-- /dark bg wrapper -->
+
+  <!-- All posts data for client-side search & pagination -->
+  <script is:inline type="application/json" id="all-posts-data" set:html={JSON.stringify(recentPosts)}></script>
+
+  <script>
+    // ── Constants ────────────────────────────────────────────────────────
+    const POSTS_PER_PAGE = 6;
+
+    // ── Data ────────────────────────────────────────────────────────────
+    const dataEl = document.getElementById('all-posts-data');
+    if (!dataEl) throw new Error('posts data missing');
+
+    interface PostData {
+      slug: string;
+      title: string;
+      description: string;
+      pubDate: string;
+      tags: string[];
+      featuredImage?: string;
+    }
+
+    const allPosts: PostData[] = JSON.parse(dataEl.textContent ?? '[]');
+    let filtered: PostData[] = [...allPosts];
+    let currentPage = 1;
+
+    // ── Time helpers ─────────────────────────────────────────────────────
+    function timeAgo(dateStr: string): string {
+      const diff = Date.now() - new Date(dateStr).getTime();
+      const h = Math.floor(diff / 3600000);
+      const d = Math.floor(diff / 86400000);
+      const mo = Math.floor(d / 30);
+      if (h < 1) return 'Just now';
+      if (h < 24) return `${h}h ago`;
+      if (d < 30) return `${d}d ago`;
+      if (mo < 12) return `${mo}mo ago`;
+      return new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(new Date(dateStr));
+    }
+
+    function escapeHtml(str: string): string {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Card template ────────────────────────────────────────────────────
+    function postCardHTML(post: PostData): string {
+      const tags = post.tags.slice(0, 2).map(t =>
+        `<span class="rounded-md border border-indigo-500/20 bg-indigo-500/10 px-2 py-0.5 text-xs text-indigo-300">${escapeHtml(t)}</span>`
+      ).join('');
+
+      const thumbnail = post.featuredImage
+        ? `<img src="${escapeHtml(post.featuredImage)}" alt="${escapeHtml(post.title)}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />`
+        : `<div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-900/60 via-purple-900/50 to-slate-900/60">
+             <svg class="h-10 w-10 text-white/10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg>
+           </div>`;
+
+      const desc = post.description
+        ? `<p class="mb-4 line-clamp-2 flex-1 text-sm leading-relaxed text-white/45">${escapeHtml(post.description)}</p>`
+        : '';
+
+      return `
+        <a href="/blog/${escapeHtml(post.slug)}"
+           class="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.05] backdrop-blur-sm transition-all duration-300 hover:border-white/20 hover:bg-white/[0.09] hover:shadow-xl hover:shadow-indigo-500/[0.08]">
+          <div class="relative aspect-video overflow-hidden">
+            ${thumbnail}
+            <div class="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[#050508]/80 to-transparent"></div>
+          </div>
+          <div class="flex flex-1 flex-col p-5">
+            ${tags ? `<div class="mb-3 flex flex-wrap gap-1.5">${tags}</div>` : ''}
+            <h3 class="mb-2 line-clamp-2 text-base font-semibold leading-snug text-white transition-colors group-hover:text-indigo-200">
+              ${escapeHtml(post.title)}
+            </h3>
+            ${desc}
+            <div class="mt-auto flex items-center justify-between border-t border-white/[0.07] pt-3">
+              <time datetime="${escapeHtml(post.pubDate)}" class="text-xs text-white/30">${timeAgo(post.pubDate)}</time>
+              <svg class="h-4 w-4 text-white/25 transition-all duration-200 group-hover:translate-x-0.5 group-hover:text-indigo-400"
+                   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+            </div>
+          </div>
+        </a>`;
+    }
+
+    // ── Render ────────────────────────────────────────────────────────────
+    function render() {
+      const grid = document.getElementById('posts-grid')!;
+      const emptyState = document.getElementById('empty-state')!;
+      const pagination = document.getElementById('pagination')!;
+      const countEl = document.getElementById('posts-count')!;
+
+      countEl.textContent = `${filtered.length} ${filtered.length === 1 ? 'post' : 'posts'}`;
+
+      if (filtered.length === 0) {
+        grid.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        pagination.classList.add('hidden');
+        return;
+      }
+
+      grid.classList.remove('hidden');
+      emptyState.classList.add('hidden');
+
+      const start = (currentPage - 1) * POSTS_PER_PAGE;
+      const pagePosts = filtered.slice(start, start + POSTS_PER_PAGE);
+      grid.innerHTML = pagePosts.map(postCardHTML).join('');
+
+      renderPagination();
+    }
+
+    function renderPagination() {
+      const pagination = document.getElementById('pagination')!;
+      const prevBtn = document.getElementById('prev-btn') as HTMLButtonElement;
+      const nextBtn = document.getElementById('next-btn') as HTMLButtonElement;
+      const pageNumbers = document.getElementById('page-numbers')!;
+      const totalPages = Math.ceil(filtered.length / POSTS_PER_PAGE);
+
+      if (totalPages <= 1) {
+        pagination.classList.add('hidden');
+        return;
+      }
+
+      pagination.classList.remove('hidden');
+      prevBtn.disabled = currentPage === 1;
+      nextBtn.disabled = currentPage === totalPages;
+
+      // Build page number buttons (show max 5 page pills)
+      const maxPills = 5;
+      let pages: (number | '…')[] = [];
+      if (totalPages <= maxPills) {
+        pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+      } else {
+        pages = [1];
+        const left = Math.max(2, currentPage - 1);
+        const right = Math.min(totalPages - 1, currentPage + 1);
+        if (left > 2) pages.push('…');
+        for (let i = left; i <= right; i++) pages.push(i);
+        if (right < totalPages - 1) pages.push('…');
+        pages.push(totalPages);
+      }
+
+      pageNumbers.innerHTML = pages.map(p =>
+        p === '…'
+          ? `<span class="flex h-9 w-9 items-center justify-center text-sm text-white/25">…</span>`
+          : `<button
+               role="listitem"
+               data-page="${p}"
+               aria-label="Page ${p}"
+               aria-current="${p === currentPage ? 'page' : 'false'}"
+               class="h-9 w-9 rounded-lg text-sm transition-all ${p === currentPage
+                 ? 'bg-indigo-600 font-semibold text-white shadow-lg shadow-indigo-600/30'
+                 : 'border border-white/10 bg-white/[0.05] text-white/50 hover:bg-white/10 hover:text-white'
+               }"
+             >${p}</button>`
+      ).join('');
+
+      pageNumbers.querySelectorAll<HTMLButtonElement>('[data-page]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentPage = parseInt(btn.dataset.page!);
+          render();
+          document.getElementById('recent-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+    }
+
+    // ── Event listeners ──────────────────────────────────────────────────
+    const searchInput = document.getElementById('search-input') as HTMLInputElement | null;
+    const clearBtn = document.getElementById('clear-search');
+    const prevBtn = document.getElementById('prev-btn') as HTMLButtonElement | null;
+    const nextBtn = document.getElementById('next-btn') as HTMLButtonElement | null;
+
+    let searchTimeout: ReturnType<typeof setTimeout>;
+    searchInput?.addEventListener('input', e => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        const q = (e.target as HTMLInputElement).value.toLowerCase().trim();
+        filtered = q
+          ? allPosts.filter(p =>
+              p.title.toLowerCase().includes(q) ||
+              (p.description ?? '').toLowerCase().includes(q) ||
+              p.tags.some(t => t.toLowerCase().includes(q))
+            )
+          : [...allPosts];
+        currentPage = 1;
+        render();
+      }, 200);
+    });
+
+    clearBtn?.addEventListener('click', () => {
+      if (searchInput) { searchInput.value = ''; searchInput.focus(); }
+      filtered = [...allPosts];
+      currentPage = 1;
+      render();
+    });
+
+    prevBtn?.addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        render();
+        document.getElementById('recent-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+
+    nextBtn?.addEventListener('click', () => {
+      const total = Math.ceil(filtered.length / POSTS_PER_PAGE);
+      if (currentPage < total) {
+        currentPage++;
+        render();
+        document.getElementById('recent-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+
+    // Initial pagination render (grid already SSR'd)
+    renderPagination();
+  </script>
 </Layout>

@@ -1,0 +1,28 @@
+rules_version = '2';
+
+// Firebase Storage Security Rules for Production
+// Note: Admin SDK (used in our project) bypasses these rules.
+// These rules are primarily for defense-in-depth and client-side SDK access.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Blog uploads — public read, admin-only write
+    match /uploads/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Profile photo — public read, admin-only write
+    // Stored at profile/photo.{ext}, served via makePublic() GCS URL
+    match /profile/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Default rule: Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -3,10 +3,11 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 
 export default function AdminLogin() {
-  const [email, setEmail]       = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError]       = useState('');
-  const [loading, setLoading]   = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,11 +48,8 @@ export default function AdminLogin() {
       <div className="w-full max-w-xs">
         {/* Lock icon */}
         <div className="mb-8 flex justify-center">
-          <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center">
-            <svg className="w-4.5 h-4.5 text-zinc-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-            </svg>
+          <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center overflow-hidden">
+            <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
           </div>
         </div>
 
@@ -59,7 +57,7 @@ export default function AdminLogin() {
           Admin Access
         </h1>
         <p className="text-center text-xs text-zinc-500 dark:text-zinc-500 mb-8">
-          Sign in with your Firebase account
+          Sign in with your admin account
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -76,18 +74,41 @@ export default function AdminLogin() {
                        focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100
                        focus:border-zinc-900 dark:focus:border-zinc-100 transition"
           />
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-            placeholder="Password"
-            className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800
-                       bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm
-                       placeholder:text-zinc-400 dark:placeholder:text-zinc-600
-                       focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100
-                       focus:border-zinc-900 dark:focus:border-zinc-100 transition"
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              placeholder="Password"
+              className="w-full px-3.5 py-2.5 pr-10 rounded-lg border border-zinc-200 dark:border-zinc-800
+                         bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 text-sm
+                         placeholder:text-zinc-400 dark:placeholder:text-zinc-600
+                         focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-zinc-100
+                         focus:border-zinc-900 dark:focus:border-zinc-100 transition"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(v => !v)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              className="absolute inset-y-0 right-0 flex items-center justify-center w-10
+                         text-zinc-400 dark:text-zinc-600 hover:text-zinc-600 dark:hover:text-zinc-400
+                         cursor-pointer transition-colors"
+            >
+              {showPassword ? (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
+            </button>
+          </div>
           {error && (
             <p className="text-xs text-red-500 dark:text-red-400">{error}</p>
           )}
@@ -103,6 +124,18 @@ export default function AdminLogin() {
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+
+        <div className="mt-8 text-center pt-8 border-t border-zinc-100 dark:border-zinc-900">
+          <a
+            href="/"
+            className="group inline-flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m15 18-6-6 6-6" />
+            </svg>
+            Back to Home
+          </a>
+        </div>
       </div>
     </div>
   );

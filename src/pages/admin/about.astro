@@ -1,0 +1,12 @@
+---
+export const prerender = false;
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import ProfileEditor from '../../components/react/ProfileEditor';
+import { getProfile } from '../../lib/firebase-admin.js';
+
+const profile = await getProfile();
+---
+
+<AdminLayout title="About — Admin">
+  <ProfileEditor initialProfile={profile} client:only="react" />
+</AdminLayout>

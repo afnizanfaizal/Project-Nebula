@@ -12,23 +12,64 @@ interface Props {
     updatedDate?: Date;
     tags: string[];
     featuredImage?: string;
+    isProject?: boolean;
   };
   headings: { depth: number; slug: string; text: string }[];
   minutesRead: number;
 }
 
 const { post, headings, minutesRead } = Astro.props;
-const { title, pubDate, updatedDate, description, tags, featuredImage } = post;
+const { title, pubDate, updatedDate, description, tags, featuredImage, isProject } = post;
 
 const formattedDate = new Intl.DateTimeFormat('en-US', {
   year: 'numeric', month: 'long', day: 'numeric',
 }).format(pubDate);
+
+const siteBase = Astro.site ?? new URL(Astro.url.origin);
+const postURL = new URL(`/blog/${post.slug}`, siteBase).toString();
+const ogImage = featuredImage
+  ? new URL(featuredImage.startsWith('http') ? featuredImage : featuredImage, siteBase).toString()
+  : undefined;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: title,
+  description,
+  url: postURL,
+  datePublished: pubDate.toISOString(),
+  ...(updatedDate && { dateModified: updatedDate.toISOString() }),
+  author: {
+    '@type': 'Person',
+    name: 'Dr. Afnizanfaizal',
+    url: siteBase.toString(),
+  },
+  publisher: {
+    '@type': 'Person',
+    name: 'Dr. Afnizanfaizal',
+    url: siteBase.toString(),
+  },
+  ...(ogImage && { image: ogImage }),
+  keywords: tags.join(', '),
+  mainEntityOfPage: {
+    '@type': 'WebPage',
+    '@id': postURL,
+  },
+};
 ---
 <Layout
   title={`${title} — Dr. Afnizanfaizal`}
   description={description}
   image={featuredImage}
+  article={{
+    publishedTime: pubDate.toISOString(),
+    modifiedTime: updatedDate?.toISOString(),
+    tags,
+    author: 'Dr. Afnizanfaizal',
+  }}
 >
+  <script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+
   <!-- Reading progress bar -->
   <div
     id="progress-bar"
@@ -41,24 +82,21 @@ const formattedDate = new Intl.DateTimeFormat('en-US', {
     <div class="relative w-full overflow-hidden" style="max-height: 480px; min-height: 240px;">
       <img
         src={featuredImage}
-        alt=""
+        alt={title}
         class="w-full object-cover"
         style="max-height: 480px; min-height: 240px;"
       />
       <div class="absolute inset-0 bg-gradient-to-b from-transparent via-black/30 to-black/90" />
       <div class="absolute bottom-0 left-0 right-0 px-6 pb-8" style="max-width: 80rem; margin: 0 auto;">
-        {tags.length > 0 && (
-          <div class="mb-3 flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <a
-                href={`/blog?tag=${tag}`}
-                class="text-xs font-medium uppercase tracking-widest text-zinc-300 hover:text-white transition-colors"
-              >
-                {tag}
-              </a>
-            ))}
-          </div>
-        )}
+        <a
+          href={isProject ? "/projects" : "/"}
+          class="mb-4 inline-flex items-center text-sm font-medium text-zinc-300 hover:text-white transition-colors group"
+        >
+          <svg class="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          {isProject ? "Back to projects" : "Back to home"}
+        </a>
         <h1 class="text-3xl sm:text-4xl font-bold tracking-tight leading-tight text-white">
           {title}
         </h1>
@@ -80,24 +118,21 @@ const formattedDate = new Intl.DateTimeFormat('en-US', {
     </div>
   )}
 
-  <div class="mx-auto max-w-5xl px-6 py-16">
+  <div class="mx-auto max-w-7xl px-6 py-16">
     <div class="lg:grid lg:grid-cols-[1fr_220px] lg:gap-16">
       <!-- Main content -->
       <article>
         {!featuredImage && (
           <header class="mb-10">
-            {tags.length > 0 && (
-              <div class="mb-4 flex flex-wrap gap-2">
-                {tags.map((tag) => (
-                  <a
-                    href={`/blog?tag=${tag}`}
-                    class="text-xs font-medium uppercase tracking-widest text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-                  >
-                    {tag}
-                  </a>
-                ))}
-              </div>
-            )}
+            <a
+              href={isProject ? "/projects" : "/"}
+              class="mb-6 inline-flex items-center text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors group"
+            >
+              <svg class="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              {isProject ? "Back to projects" : "Back to home"}
+            </a>
             <h1 class="text-3xl sm:text-4xl font-bold tracking-tight leading-tight text-zinc-900 dark:text-zinc-100">
               {title}
             </h1>
@@ -129,7 +164,7 @@ const formattedDate = new Intl.DateTimeFormat('en-US', {
       <!-- Sidebar TOC (desktop only) -->
       <aside class="hidden lg:block">
         <div class="sticky top-24">
-          <TableOfContents headings={headings} />
+          <TableOfContents headings={headings} tags={tags} />
         </div>
       </aside>
     </div>

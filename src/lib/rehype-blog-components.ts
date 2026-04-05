@@ -53,11 +53,8 @@ export function rehypeBlogComponents() {
         return;
       }
 
-      // ── Figure (custom — identified by presence of `src` attribute) ───
+      // ── Figure (custom JSX tag) ────────────────────────────────────────
       // parse5 lowercases <Figure> → <figure>. Standard HTML <figure> never has a src attribute.
-      // IMPORTANT: parse5 treats <Figure .../> as a non-void block element, so it captures
-      // everything that follows (until </figure> or end of document) as children of the node.
-      // We must splice those swallowed children back out as siblings after our replacement.
       if (node.tagName === 'figure' && node.properties?.src) {
         const src     = String(node.properties.src ?? '');
         const alt     = String(node.properties.alt ?? '');
@@ -75,6 +72,24 @@ export function rehypeBlogComponents() {
         const swallowed = node.children ?? [];
         parent.children.splice(index, 1, newFigure, ...swallowed);
         return;
+      }
+
+      // ── Image Alignment via URL Fragment (e.g. ![alt](url#left)) ────
+      if (node.tagName === 'img' && node.properties?.src) {
+        const url = String(node.properties.src);
+        const match = url.match(/#(left|right|center|none)(?:$|\s|\?|&)/);
+        
+        if (match) {
+          const align = match[1];
+          const src = url.replace(match[0], '');
+          
+          parent.children[index] = el(
+            'figure',
+            { className: `blog-figure figure-${align}` },
+            el('img', { ...node.properties, src, loading: 'lazy' }),
+          );
+          return;
+        }
       }
 
       // ── ZoomImage ──────────────────────────────────────────────────────
@@ -102,6 +117,16 @@ export function rehypeBlogComponents() {
             : []
           ),
         );
+        return;
+      }
+
+      // ── PDF Links (Open in new tab) ───────────────────────────────────
+      if (node.tagName === 'a' && node.properties?.href) {
+        const href = String(node.properties.href);
+        if (href.toLowerCase().endsWith('.pdf')) {
+          node.properties.target = '_blank';
+          node.properties.rel = 'noopener noreferrer';
+        }
         return;
       }
     });

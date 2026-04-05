@@ -27,20 +27,20 @@ export const POST: APIRoute = async ({ request }) => {
     request.headers.get('x-real-ip') ??
     '127.0.0.1';
 
-  // ip-api.com free tier is HTTP-only — intentional trade-off for a personal blog
-  // Geo-lookup with 500ms timeout
+  // Geo-lookup via ipwho.is (HTTPS, free tier ~10k req/month, 500ms timeout).
+  // Falls back to 'XX' on any error — view is always recorded regardless.
   let countryCode = 'XX';
   try {
     const controller = new AbortController();
     const tid = setTimeout(() => controller.abort(), 500);
-    const geoRes = await fetch(`http://ip-api.com/json/${ip}?fields=countryCode`, {
+    const geoRes = await fetch(`https://ipwho.is/${ip}?fields=country_code`, {
       signal: controller.signal,
     });
     clearTimeout(tid);
     if (geoRes.ok) {
       const geoData = await geoRes.json();
-      if (typeof geoData.countryCode === 'string' && geoData.countryCode.length === 2) {
-        countryCode = geoData.countryCode;
+      if (typeof geoData.country_code === 'string' && geoData.country_code.length === 2) {
+        countryCode = geoData.country_code;
       }
     }
   } catch {

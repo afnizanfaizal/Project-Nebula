@@ -13,6 +13,8 @@ interface SavePayload {
     featuredImage: string;
     tags:          string[];
     status:        'draft' | 'published';
+    featured:      boolean;
+    isProject:     boolean;
     pubDate:       string; // YYYY-MM-DD
   };
   body: string;
@@ -52,7 +54,8 @@ export const POST: APIRoute = async ({ request }) => {
       pubDate,
       tags:          Array.isArray(meta.tags) ? meta.tags.map(String) : [],
       draft:         meta.status === 'draft',
-      featured:      false,
+      featured:      Boolean(meta.featured),
+      isProject:     Boolean(meta.isProject),
       ...(meta.featuredImage ? { featuredImage: meta.featuredImage } : {}),
       content:       body,
     });

@@ -1,0 +1,94 @@
+---
+export const prerender = false;
+import Layout from '../layouts/Layout.astro';
+import { getProfile } from '../lib/firebase-admin.js';
+
+const profile = await getProfile();
+---
+
+<Layout
+  title={profile.name ? `About — ${profile.name}` : 'About'}
+  description={profile.bio?.slice(0, 155) || 'About page'}
+>
+  <div class="relative min-h-dvh bg-[#050508]">
+
+    <!-- Ambient glow orbs -->
+    <div aria-hidden="true" class="pointer-events-none absolute -top-40 -left-48 h-[700px] w-[700px] rounded-full bg-purple-700/20 blur-[140px]"></div>
+    <div aria-hidden="true" class="pointer-events-none absolute top-1/3 -right-60 h-[500px] w-[500px] rounded-full bg-indigo-700/[0.13] blur-[110px]"></div>
+    <div aria-hidden="true" class="pointer-events-none absolute bottom-0 left-1/4 h-[400px] w-[400px] rounded-full bg-violet-600/[0.08] blur-[100px]"></div>
+
+    <div class="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
+
+      <!-- ── Hero: Photo + Identity ─────────────────────────────────────── -->
+      <section class="flex flex-col items-center gap-12 sm:flex-row sm:items-start sm:gap-16" aria-label="Profile">
+
+        <!-- Circular photo with purple glow — 35% larger than before -->
+        <div class="relative flex-shrink-0">
+          <div aria-hidden="true" class="absolute inset-0 rounded-full bg-gradient-to-br from-purple-600/60 via-indigo-600/40 to-transparent blur-[24px] scale-110"></div>
+          <div class="relative h-64 w-64 rounded-full p-[3px] bg-gradient-to-br from-purple-500/80 via-indigo-500/60 to-purple-800/40 shadow-2xl shadow-purple-900/50 sm:h-72 sm:w-72">
+            {profile.profilePhoto ? (
+              <img
+                src={profile.profilePhoto}
+                alt={profile.name || 'Profile photo'}
+                class="h-full w-full rounded-full object-cover"
+                loading="eager"
+              />
+            ) : (
+              <div class="flex h-full w-full items-center justify-center rounded-full bg-gradient-to-br from-purple-900/80 via-indigo-900/70 to-slate-900">
+                <svg class="h-24 w-24 text-white/20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                </svg>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <!-- Name, title, bio, skills -->
+        <div class="flex min-w-0 max-w-3xl flex-col items-center text-center sm:items-start sm:text-left">
+
+          {profile.name && (
+            <h1 class="mb-1 text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
+              {profile.name}
+            </h1>
+          )}
+
+          {profile.title && (
+            <p class="mb-5 text-base font-medium text-indigo-300 sm:text-lg">
+              {profile.title}
+            </p>
+          )}
+
+          {profile.bio && (
+            <div class="mb-6 space-y-3 text-sm leading-relaxed text-white/55 sm:text-base">
+              {profile.bio.split('\n').filter(Boolean).map(para => (
+                <p>{para}</p>
+              ))}
+            </div>
+          )}
+
+          {profile.skills && profile.skills.length > 0 && (
+            <div class="flex flex-wrap justify-center gap-2 sm:justify-start" role="list" aria-label="Skills and expertise">
+              {profile.skills.map(skill => (
+                <span role="listitem" class="rounded-lg border border-indigo-500/20 bg-indigo-500/10 px-3 py-1.5 text-xs font-medium text-indigo-300">
+                  {skill}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <!-- Empty state when no profile is configured -->
+      {!profile.name && !profile.bio && (
+        <div class="flex min-h-[50vh] flex-col items-center justify-center text-center">
+          <svg class="mb-5 h-14 w-14 text-white/10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          <p class="text-base text-white/25">Profile not yet configured.</p>
+          <p class="mt-1 text-sm text-white/15">The admin can set this up in the dashboard.</p>
+        </div>
+      )}
+
+    </div>
+  </div>
+</Layout>

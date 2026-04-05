@@ -1,0 +1,34 @@
+rules_version = '2';
+
+// Firestore Security Rules
+// Note: All reads/writes in this project go through the Admin SDK (server-side),
+// which bypasses these rules. These rules are defense-in-depth — they deny any
+// direct client-side Firestore access that should never happen in production.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Posts collection — publicly readable (published posts), admin-only writes
+    // In practice, all reads/writes are via Admin SDK on the server.
+    match /posts/{slug} {
+      allow read: if resource.data.draft != true;
+      allow write: if false; // Admin SDK only
+    }
+
+    // Analytics — server-side only, no client access needed
+    match /analytics/{docId} {
+      allow read, write: if false;
+    }
+
+    // Site config (includes profile document at site/profile)
+    // getProfile() is called server-side; no client SDK access needed
+    match /site/{docId} {
+      allow read, write: if false;
+    }
+
+    // Deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

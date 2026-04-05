@@ -3,6 +3,10 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { adminAuth } from '../../../lib/firebase-admin.js';
 
+// Session cookie TTL: 1 hour (must be provided in milliseconds to createSessionCookie)
+const SESSION_DURATION_MS = 60 * 60 * 1000;
+const SESSION_DURATION_S  = 60 * 60;
+
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     const body = await request.json() as { idToken?: unknown };
@@ -14,14 +18,22 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       });
     }
 
+    // Verify the ID token is valid before creating a session cookie
     await adminAuth.verifyIdToken(idToken);
 
-    cookies.set('admin_session', idToken, {
+    // Exchange the short-lived ID token for a revocable, opaque session cookie.
+    // Unlike storing the raw JWT, this cookie can be revoked server-side at any
+    // time via adminAuth.revokeRefreshTokens(uid).
+    const sessionCookie = await adminAuth.createSessionCookie(idToken, {
+      expiresIn: SESSION_DURATION_MS,
+    });
+
+    cookies.set('admin_session', sessionCookie, {
       path: '/',
       httpOnly: true,
       secure: import.meta.env.PROD,
       sameSite: 'strict',
-      maxAge: 60 * 60, // 1 hour (matches Firebase ID token TTL)
+      maxAge: SESSION_DURATION_S,
     });
 
     return new Response(JSON.stringify({ ok: true }), {

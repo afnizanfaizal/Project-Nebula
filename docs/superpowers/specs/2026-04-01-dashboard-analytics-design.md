@@ -125,7 +125,7 @@ These are passed as props alongside the existing `posts` prop. No client-side Fi
 | `src/components/react/ViewCounter.tsx` | Replace `incrementPostViews` with fetch to `/api/track-view` |
 | `src/pages/admin/dashboard.astro` | Fetch 30-day analytics + top countries server-side, pass as props |
 | `src/components/react/AdminDashboard.tsx` | Replace mock data with props; remove client-side view fetching |
-| `src/lib/firebase-admin.ts` | Add `getAnalytics(days)` helper and `getDailyAnalytics(dates)` helper |
+| `src/lib/firebase-admin.ts` | Add `getDailyAnalytics(dates)` helper; add `views` to `PostSummary` type and `listPosts()` mapping |
 
 ---
 

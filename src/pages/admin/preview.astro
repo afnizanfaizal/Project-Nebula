@@ -1,0 +1,67 @@
+---
+// src/pages/admin/preview.astro
+export const prerender = false;
+import PostLayout from '../../layouts/PostLayout.astro';
+import { renderMarkdown } from '../../lib/render-markdown';
+import { getReadingTime } from '../../lib/utils';
+
+// Security: Only allow admins to use the preview page
+const { isValidAdminToken } = await import('../../lib/firebase-admin.js');
+const adminCookie = Astro.cookies.get('admin_session')?.value;
+const isAdmin = await isValidAdminToken(adminCookie);
+
+if (!isAdmin) {
+  return Astro.redirect('/admin');
+}
+
+let postData = {
+  title: 'Preview',
+  content: '',
+  description: '',
+  tags: [] as string[],
+  featuredImage: '',
+  pubDate: new Date(),
+};
+
+// Handle POST data from the editor's hidden form
+if (Astro.request.method === 'POST') {
+  try {
+    const formData = await Astro.request.formData();
+    const tagsRaw = formData.get('tags')?.toString() || '';
+    
+    postData = {
+      title:         formData.get('title')?.toString() || 'Untitled Preview',
+      content:       formData.get('content')?.toString() || '',
+      description:   formData.get('description')?.toString() || '',
+      tags:          tagsRaw.split(',').filter(Boolean),
+      featuredImage: formData.get('featuredImage')?.toString() || '',
+      pubDate:       new Date(formData.get('pubDate')?.toString() || new Date()),
+    };
+  } catch (err) {
+    console.error('[Preview] Error parsing form data:', err);
+  }
+}
+
+const { html, headings } = await renderMarkdown(postData.content);
+const readingTime = getReadingTime(postData.content);
+---
+
+<PostLayout
+  post={{
+    slug: 'preview-mode',
+    title:         postData.title,
+    description:   postData.description,
+    pubDate:       postData.pubDate,
+    tags:          postData.tags,
+    featuredImage: postData.featuredImage,
+  }}
+  headings={headings}
+  minutesRead={readingTime}
+>
+  <div class="mb-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-500 text-[10px] font-bold uppercase tracking-wider mb-8" slot="after-meta">
+    <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+    Preview Mode
+  </div>
+  
+  <Fragment set:html={html} />
+</PostLayout>

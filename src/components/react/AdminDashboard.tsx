@@ -1,7 +1,8 @@
 // src/components/react/AdminDashboard.tsx
 // Full-screen admin dashboard — sidebar + overview + posts management
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { ReactNode } from 'react';
+import ProfileEditor from './ProfileEditor';
 import {
   AreaChart,
   Area,
@@ -24,6 +25,7 @@ export interface PostData {
   description: string;
   featured: boolean;
   views: number;
+  isProject?: boolean;
 }
 
 interface Props {
@@ -91,6 +93,11 @@ const Icon = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
     </svg>
   ),
+  Photo: (p: { className?: string }) => (
+    <svg className={p.className ?? 'w-4 h-4'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+    </svg>
+  ),
 };
 
 // ── Recharts custom tooltip ──────────────────────────────────────────
@@ -125,6 +132,19 @@ function StatusBadge({ draft }: { draft: boolean }) {
   ) : (
     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 whitespace-nowrap">
       Published
+    </span>
+  );
+}
+
+function TypeBadge({ isProject, tags }: { isProject?: boolean, tags: string[] }) {
+  const isProj = isProject || tags.some(t => t.toLowerCase() === 'project');
+  return isProj ? (
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20 whitespace-nowrap">
+      Project
+    </span>
+  ) : (
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-zinc-700/30 text-zinc-400 border border-zinc-700/50 whitespace-nowrap">
+      Post
     </span>
   );
 }
@@ -170,13 +190,13 @@ function OverviewSection({
   draftCount,
   featuredCount,
 }: {
-  posts:          PostData[];
-  viewsChart:     ChartPoint[];
-  topCountries:   CountryEntry[];
-  totalViews:     number;
+  posts: PostData[];
+  viewsChart: ChartPoint[];
+  topCountries: CountryEntry[];
+  totalViews: number;
   publishedCount: number;
-  draftCount:     number;
-  featuredCount:  number;
+  draftCount: number;
+  featuredCount: number;
 }) {
   return (
     <div className="space-y-6 max-w-6xl">
@@ -222,7 +242,7 @@ function OverviewSection({
             <AreaChart data={viewsChart} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.35} />
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35} />
                   <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
                 </linearGradient>
               </defs>
@@ -290,10 +310,10 @@ function OverviewSection({
         </div>
       </div>
 
-      {/* Recent posts summary */}
+      {/* Popular posts summary */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-zinc-100">Recent Posts</h2>
+          <h2 className="text-sm font-semibold text-zinc-100">Popular Posts</h2>
           <a
             href="/admin/editor"
             className="text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
@@ -305,13 +325,13 @@ function OverviewSection({
           <div className="px-5 py-10 text-center text-sm text-zinc-500">No posts yet.</div>
         ) : (
           <div className="divide-y divide-zinc-800">
-            {posts.slice(0, 5).map((post) => (
+            {[...posts].sort((a, b) => b.views - a.views).slice(0, 5).map((post) => (
               <div key={post.slug} className="px-5 py-3.5 flex items-center gap-4 hover:bg-zinc-800/30 transition-colors">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-zinc-100 truncate">{post.title}</p>
                   <p className="text-xs text-zinc-500 font-mono mt-0.5">{post.slug}</p>
                 </div>
-                <StatusBadge draft={post.draft} />
+                <TypeBadge isProject={post.isProject} tags={post.tags} />
                 <span className="text-xs text-zinc-500 font-mono tabular-nums hidden sm:block w-16 text-right">
                   {post.views.toLocaleString()} views
                 </span>
@@ -325,13 +345,6 @@ function OverviewSection({
                   >
                     <Icon.Eye className="w-3.5 h-3.5" />
                   </a>
-                  <a
-                    href={`/admin/editor?slug=${post.slug}`}
-                    className="p-1.5 rounded text-zinc-600 hover:text-blue-400 hover:bg-blue-950/40 transition-colors"
-                    aria-label={`Edit ${post.title}`}
-                  >
-                    <Icon.Pencil className="w-3.5 h-3.5" />
-                  </a>
                 </div>
               </div>
             ))}
@@ -344,143 +357,208 @@ function OverviewSection({
 
 // ── Posts section ─────────────────────────────────────────────────────
 
+function PostsTable({
+  title,
+  posts,
+  emptyMessage,
+  emptyButtonLabel,
+  onDeleteRequest,
+}: {
+  title: string;
+  posts: PostData[];
+  emptyMessage: string;
+  emptyButtonLabel: string;
+  onDeleteRequest: (post: PostData) => void;
+}) {
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden mb-8">
+      <div className="px-5 py-4 border-b border-zinc-800">
+        <h2 className="text-sm font-semibold text-zinc-100">{title}</h2>
+        <p className="text-xs text-zinc-500 mt-0.5">
+          {posts.length} {posts.length === 1 ? 'post' : 'posts'} total
+        </p>
+      </div>
+
+      {posts.length === 0 ? (
+        <div className="py-16 text-center">
+          <Icon.Document className="w-8 h-8 text-zinc-700 mx-auto mb-3" />
+          <p className="text-sm text-zinc-500 mb-4">{emptyMessage}</p>
+          <a
+            href="/admin/editor"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors"
+          >
+            <Icon.Plus className="w-3.5 h-3.5" />
+            {emptyButtonLabel}
+          </a>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-zinc-800 bg-zinc-900/50">
+                <th className="px-5 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
+                  Title
+                </th>
+                <th className="px-3 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider hidden sm:table-cell">
+                  Date
+                </th>
+                <th className="px-3 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-3 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider hidden md:table-cell">
+                  Featured
+                </th>
+                <th className="px-3 py-3 text-right text-[11px] font-medium text-zinc-500 uppercase tracking-wider hidden sm:table-cell">
+                  Views
+                </th>
+                <th className="px-5 py-3 text-right text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-800">
+              {posts.map((post) => (
+                <tr key={post.slug} className="hover:bg-zinc-800/30 transition-colors group">
+                  <td className="px-5 py-4">
+                    <p className="text-sm font-medium text-zinc-100 leading-snug">{post.title}</p>
+                    <p className="text-[11px] text-zinc-600 font-mono mt-0.5">{post.slug}</p>
+                  </td>
+                  <td className="px-3 py-4 text-xs text-zinc-400 whitespace-nowrap hidden sm:table-cell">
+                    {new Date(post.pubDate).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </td>
+                  <td className="px-3 py-4">
+                    <StatusBadge draft={post.draft} />
+                  </td>
+                  <td className="px-3 py-4 hidden md:table-cell">
+                    {post.featured ? (
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                        <Icon.Star className="w-2.5 h-2.5" />
+                        Featured
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-zinc-600">No</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-4 text-right hidden sm:table-cell">
+                    <span className="text-xs text-zinc-400 font-mono tabular-nums">
+                      {post.views.toLocaleString()}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <a
+                        href={`/blog/${post.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded-md text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
+                        aria-label={`View "${post.title}"`}
+                        title="View"
+                      >
+                        <Icon.Eye className="w-3.5 h-3.5" />
+                      </a>
+                      <a
+                        href={`/admin/editor?slug=${post.slug}`}
+                        className="p-1.5 rounded-md text-zinc-600 hover:text-blue-400 hover:bg-blue-950/40 transition-colors"
+                        aria-label={`Edit "${post.title}"`}
+                        title="Edit"
+                      >
+                        <Icon.Pencil className="w-3.5 h-3.5" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => onDeleteRequest(post)}
+                        className="p-1.5 rounded-md text-zinc-600 hover:text-red-400 hover:bg-red-950/40 transition-colors cursor-pointer"
+                        aria-label={`Delete "${post.title}"`}
+                        title="Delete"
+                      >
+                        <Icon.Trash className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PostsSection({
   posts,
   onDeleteRequest,
 }: {
-  posts:           PostData[];
+  posts: PostData[];
   onDeleteRequest: (post: PostData) => void;
 }) {
+  const regularPosts = posts.filter(p => !p.isProject && !p.tags.some(t => t.toLowerCase() === 'project'));
+  const projectPosts = posts.filter(p => p.isProject || p.tags.some(t => t.toLowerCase() === 'project'));
+
   return (
     <div className="max-w-6xl">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-zinc-800">
-          <h2 className="text-sm font-semibold text-zinc-100">All Posts</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">
-            {posts.length} {posts.length === 1 ? 'post' : 'posts'} total
-          </p>
-        </div>
-
-        {posts.length === 0 ? (
-          <div className="py-16 text-center">
-            <Icon.Document className="w-8 h-8 text-zinc-700 mx-auto mb-3" />
-            <p className="text-sm text-zinc-500 mb-4">No posts yet.</p>
-            <a
-              href="/admin/editor"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors"
-            >
-              <Icon.Plus className="w-3.5 h-3.5" />
-              Create your first post
-            </a>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-zinc-800 bg-zinc-900/50">
-                  <th className="px-5 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
-                    Title
-                  </th>
-                  <th className="px-3 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider hidden sm:table-cell">
-                    Date
-                  </th>
-                  <th className="px-3 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-3 py-3 text-left text-[11px] font-medium text-zinc-500 uppercase tracking-wider hidden lg:table-cell">
-                    Tags
-                  </th>
-                  <th className="px-3 py-3 text-right text-[11px] font-medium text-zinc-500 uppercase tracking-wider hidden sm:table-cell">
-                    Views
-                  </th>
-                  <th className="px-5 py-3 text-right text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800">
-                {posts.map((post) => (
-                  <tr key={post.slug} className="hover:bg-zinc-800/30 transition-colors group">
-                    <td className="px-5 py-4">
-                      <p className="text-sm font-medium text-zinc-100 leading-snug">{post.title}</p>
-                      <p className="text-[11px] text-zinc-600 font-mono mt-0.5">{post.slug}</p>
-                    </td>
-                    <td className="px-3 py-4 text-xs text-zinc-400 whitespace-nowrap hidden sm:table-cell">
-                      {new Date(post.pubDate).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
-                    </td>
-                    <td className="px-3 py-4">
-                      <StatusBadge draft={post.draft} />
-                    </td>
-                    <td className="px-3 py-4 hidden lg:table-cell">
-                      <div className="flex flex-wrap gap-1">
-                        {post.tags.slice(0, 3).map((tag) => (
-                          <span
-                            key={tag}
-                            className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700/60"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                        {post.tags.length > 3 && (
-                          <span className="text-[10px] text-zinc-600">+{post.tags.length - 3}</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-3 py-4 text-right hidden sm:table-cell">
-                      <span className="text-xs text-zinc-400 font-mono tabular-nums">
-                        {post.views.toLocaleString()}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-1.5 justify-end">
-                        <a
-                          href={`/blog/${post.slug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-1.5 rounded-md text-zinc-600 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
-                          aria-label={`View "${post.title}"`}
-                          title="View"
-                        >
-                          <Icon.Eye className="w-3.5 h-3.5" />
-                        </a>
-                        <a
-                          href={`/admin/editor?slug=${post.slug}`}
-                          className="p-1.5 rounded-md text-zinc-600 hover:text-blue-400 hover:bg-blue-950/40 transition-colors"
-                          aria-label={`Edit "${post.title}"`}
-                          title="Edit"
-                        >
-                          <Icon.Pencil className="w-3.5 h-3.5" />
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => onDeleteRequest(post)}
-                          className="p-1.5 rounded-md text-zinc-600 hover:text-red-400 hover:bg-red-950/40 transition-colors cursor-pointer"
-                          aria-label={`Delete "${post.title}"`}
-                          title="Delete"
-                        >
-                          <Icon.Trash className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      <PostsTable
+        title="All Posts"
+        posts={regularPosts}
+        emptyMessage="No posts yet."
+        emptyButtonLabel="Create your first post"
+        onDeleteRequest={onDeleteRequest}
+      />
+      <PostsTable
+        title="Projects"
+        posts={projectPosts}
+        emptyMessage="No projects yet."
+        emptyButtonLabel="Create your first project"
+        onDeleteRequest={onDeleteRequest}
+      />
     </div>
   );
 }
 
 // ── Main component ────────────────────────────────────────────────────
+import MediaManager from './MediaManager';
+
+// ── About section (self-fetching) ─────────────────────────────────────────
+
+interface ProfileData {
+  name: string; title: string; bio: string;
+  profilePhoto: string; skills: string[];
+}
+
+function AboutSection() {
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/about')
+      .then(r => r.json())
+      .then(data => { setProfile(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/10 border-t-indigo-500" />
+      </div>
+    );
+  }
+
+  return <ProfileEditor initialProfile={profile ?? { name: '', title: '', bio: '', profilePhoto: '', skills: [] }} />;
+}
 
 export default function AdminDashboard({ posts: initialPosts, viewsChart, topCountries }: Props) {
-  const [section, setSection] = useState<'overview' | 'posts'>('overview');
+  const [section, setSection] = useState<'overview' | 'posts' | 'media' | 'about'>(() => {
+    if (typeof window !== 'undefined') {
+      const tab = new URLSearchParams(window.location.search).get('tab');
+      if (tab === 'posts' || tab === 'media' || tab === 'overview' || tab === 'about') return tab as 'overview' | 'posts' | 'media' | 'about';
+    }
+    return 'overview';
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [posts, setPosts] = useState(initialPosts);
   const [deleteTarget, setDeleteTarget] = useState<PostData | null>(null);
@@ -493,8 +571,8 @@ export default function AdminDashboard({ posts: initialPosts, viewsChart, topCou
     [posts]
   );
   const publishedCount = posts.filter((p) => !p.draft).length;
-  const draftCount     = posts.filter((p) => p.draft).length;
-  const featuredCount  = posts.filter((p) => p.featured).length;
+  const draftCount = posts.filter((p) => p.draft).length;
+  const featuredCount = posts.filter((p) => p.featured).length;
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -530,7 +608,8 @@ export default function AdminDashboard({ posts: initialPosts, viewsChart, topCou
   // Sidebar nav items
   const navItems = [
     { id: 'overview' as const, label: 'Overview', icon: <Icon.Grid /> },
-    { id: 'posts'    as const, label: 'Posts',    icon: <Icon.Document /> },
+    { id: 'posts' as const, label: 'Posts', icon: <Icon.Document /> },
+    { id: 'media' as const, label: 'Media', icon: <Icon.Photo /> },
   ];
 
   const SidebarContent = (
@@ -538,9 +617,7 @@ export default function AdminDashboard({ posts: initialPosts, viewsChart, topCou
       {/* Brand */}
       <div className="h-14 flex items-center px-5 border-b border-zinc-800 flex-shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-md bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
-            <span className="block w-2 h-2 rounded-sm bg-blue-400" />
-          </div>
+          <img src="/logo.png" alt="Logo" className="w-6 h-6 object-contain" />
           <div className="leading-none">
             <p className="text-xs font-semibold text-zinc-100">Blog Admin</p>
             <p className="text-[10px] text-zinc-500 mt-0.5">Dr. Afnizanfaizal</p>
@@ -578,6 +655,27 @@ export default function AdminDashboard({ posts: initialPosts, viewsChart, topCou
             <Icon.Pencil />
             New Post
           </a>
+        </div>
+
+        <div className="pt-1">
+          <p className="px-3 py-1 text-[10px] font-medium text-zinc-600 uppercase tracking-wider">
+            Settings
+          </p>
+          <button
+            type="button"
+            onClick={() => { setSection('about'); setSidebarOpen(false); }}
+            className={`
+              w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer
+              ${section === 'about'
+                ? 'bg-zinc-800 text-zinc-100 font-medium'
+                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'}
+            `}
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+            </svg>
+            Profile
+          </button>
         </div>
       </nav>
 
@@ -640,7 +738,7 @@ export default function AdminDashboard({ posts: initialPosts, viewsChart, topCou
           >
             <Icon.Bars />
           </button>
-          <h1 className="text-sm font-semibold text-zinc-100 capitalize">{section}</h1>
+          <h1 className="text-sm font-semibold text-zinc-100 capitalize">{section === 'about' ? 'About Page' : section}</h1>
           {section === 'posts' && (
             <a
               href="/admin/editor"
@@ -670,6 +768,12 @@ export default function AdminDashboard({ posts: initialPosts, viewsChart, topCou
               posts={posts}
               onDeleteRequest={setDeleteTarget}
             />
+          )}
+          {section === 'media' && (
+            <MediaManager />
+          )}
+          {section === 'about' && (
+            <AboutSection />
           )}
         </main>
       </div>
