@@ -19,6 +19,7 @@ export interface CountryEntry {
 }
 
 const COUNTRY_INFO: Record<string, { name: string; flag: string }> = {
+  XX: { name: 'Unknown Location', flag: '🌐' },
   MY: { name: 'Malaysia',       flag: '🇲🇾' },
   SG: { name: 'Singapore',      flag: '🇸🇬' },
   ID: { name: 'Indonesia',      flag: '🇮🇩' },
