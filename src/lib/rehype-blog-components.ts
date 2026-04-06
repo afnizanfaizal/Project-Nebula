@@ -120,6 +120,106 @@ export function rehypeBlogComponents() {
         return;
       }
 
+      // ── YouTube JSX Component ─────────────────────────────────────────
+      if (node.tagName === 'youtube') {
+        const id    = String(node.properties?.id ?? '');
+        const width = String(node.properties?.width ?? '100%');
+        
+        parent.children[index] = el(
+          'figure',
+          { 
+            className: 'not-prose my-8 block mx-auto',
+            style: `width: ${width}; max-width: 100%;`
+          },
+          el('div', { className: 'aspect-video w-full' },
+            el('iframe', {
+              src: `https://www.youtube.com/embed/${id}`,
+              className: 'w-full h-full rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-800',
+              allowFullScreen: true,
+              allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+              title: 'YouTube Video'
+            })
+          )
+        );
+        return;
+      }
+
+      // ── Stats Grid Component ─────────────────────────────────────────
+      // NOTE: rehype-raw uses parse5 (HTML5 parser) which treats <stat /> as
+      // an unclosed open tag, causing each stat to nest inside the previous one.
+      // We collect all stat nodes recursively to flatten the nesting, and render
+      // them all here instead of relying on a separate stat visitor (which would
+      // write into a stale parent reference after stats-grid is replaced).
+      if (node.tagName === 'stats-grid') {
+        const statEls: any[] = [];
+
+        const collectStats = (children: any[]) => {
+          for (const child of children) {
+            if (child.type === 'element' && child.tagName === 'stat') {
+              const val = String(child.properties?.value ?? '');
+              const lbl = String(child.properties?.label ?? '');
+              statEls.push(
+                el('div', { className: 'flex flex-col' },
+                  el('p', { className: 'text-3xl sm:text-4xl font-extrabold text-white mb-2 tracking-tight' }, txt(val)),
+                  el('p', { className: 'text-xs sm:text-sm text-zinc-400 leading-snug font-medium' }, txt(lbl))
+                )
+              );
+              // Recurse: HTML5 parser nests <stat /> elements inside each other
+              if (child.children?.length) collectStats(child.children);
+            }
+          }
+        };
+
+        collectStats(node.children || []);
+
+        parent.children[index] = el(
+          'div',
+          { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 my-16 not-prose' },
+          ...statEls
+        );
+        return;
+      }
+
+      // Standalone <stat> outside a stats-grid
+      if (node.tagName === 'stat') {
+        const val = String(node.properties?.value ?? '');
+        const lbl = String(node.properties?.label ?? '');
+
+        parent.children[index] = el(
+          'div',
+          { className: 'flex flex-col' },
+          el('p', { className: 'text-3xl sm:text-4xl font-extrabold text-white mb-2 tracking-tight' }, txt(val)),
+          el('p', { className: 'text-xs sm:text-sm text-zinc-400 leading-snug font-medium' }, txt(lbl))
+        );
+        return;
+      }
+
+      // ── Auto-embed YouTube Links (Legacy Fallback) ───────────────────
+      if (node.tagName === 'p') {
+        const nonSpaceChildren = node.children.filter((c: any) => !(c.type === 'text' && !c.value.trim()));
+        if (nonSpaceChildren.length === 1 && nonSpaceChildren[0].tagName === 'a') {
+          const child = nonSpaceChildren[0];
+          const href = String(child.properties?.href || '');
+          const ytMatch = href.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+          
+          if (ytMatch && ytMatch[1]) {
+            const videoId = ytMatch[1];
+            parent.children[index] = el(
+              'figure',
+              { className: 'not-prose my-8' },
+              el('iframe', {
+                src: `https://www.youtube.com/embed/${videoId}`,
+                className: 'aspect-video w-full rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-800',
+                allowFullScreen: true,
+                allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+                title: 'YouTube Video'
+              })
+            );
+            return;
+          }
+        }
+      }
+
       // ── PDF Links (Open in new tab) ───────────────────────────────────
       if (node.tagName === 'a' && node.properties?.href) {
         const href = String(node.properties.href);

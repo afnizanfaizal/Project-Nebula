@@ -17,6 +17,10 @@ import {
   BlockTypeSelect,
   InsertCodeBlock,
   CodeMirrorEditor,
+  jsxPlugin,
+  type JsxComponentDescriptor,
+  useMdastNodeUpdater,
+  type JsxEditorProps,
 } from '@mdxeditor/editor';
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import MediaLibrary, { type ImageMetadata } from './MediaLibrary';
@@ -87,6 +91,284 @@ function stripBrokenImages(md: string): string {
   return md.replace(/!\[[^\]]*\]\(\s*\)\n?/g, '');
 }
 
+/** Extract YouTube Video ID from various URL formats */
+function getYouTubeId(url: string): string | null {
+  const match = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return match ? match[1] : null;
+}
+
+/** Custom Interactive Editor for the <youtube /> component */
+const YouTubeEditor = ({ mdastNode }: JsxEditorProps) => {
+  const updateMdastNode = useMdastNodeUpdater();
+  
+  // Helper to extract attributes from MDAST node
+  const attributes = useMemo(() => {
+    const attrs: Record<string, string> = {};
+    (mdastNode.attributes as any[] || []).forEach(attr => {
+      if (attr.name && attr.value !== undefined) {
+        attrs[attr.name] = String(attr.value);
+      }
+    });
+    return attrs;
+  }, [mdastNode.attributes]);
+
+  const id = attributes.id || '';
+  const width = attributes.width || '100%';
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const [currentWidth, setCurrentWidth] = useState(width);
+
+  // Sync internal state with props
+  useEffect(() => {
+    setCurrentWidth(width);
+  }, [width]);
+
+  const updateAttributes = useCallback((newAttrs: Record<string, string>) => {
+    const nextAttributes = [...(mdastNode.attributes as any[] || [])];
+    Object.entries(newAttrs).forEach(([name, value]) => {
+      const idx = nextAttributes.findIndex(a => a.name === name);
+      if (idx !== -1) {
+        nextAttributes[idx] = { ...nextAttributes[idx], value };
+      } else {
+        nextAttributes.push({ type: 'mdxJsxAttribute', name, value });
+      }
+    });
+    updateMdastNode({ ...mdastNode, attributes: nextAttributes });
+  }, [mdastNode, updateMdastNode]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (containerRef.current) {
+        const parentRect = containerRef.current.parentElement?.getBoundingClientRect();
+        if (parentRect) {
+          const rect = containerRef.current.getBoundingClientRect();
+          const newWidthPx = e.clientX - rect.left;
+          const newWidthPct = Math.min(100, Math.max(10, (newWidthPx / parentRect.width) * 100));
+          setCurrentWidth(`${Math.round(newWidthPct)}%`);
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      updateAttributes({ width: currentWidth });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, currentWidth, updateAttributes]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative my-8 group mx-auto"
+      style={{ width: currentWidth, maxWidth: '100%' }}
+    >
+      <div className="aspect-video w-full rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center overflow-hidden relative shadow-2xl">
+        {/* Real iframe preview (pointer-events-none while resizing) */}
+        <iframe
+          src={`https://www.youtube.com/embed/${id}`}
+          className={`w-full h-full ${isResizing ? 'pointer-events-none' : ''}`}
+          title="YouTube Video Preview"
+        />
+        
+        {/* Resize Handle */}
+        <div
+          onMouseDown={handleMouseDown}
+          className="absolute top-0 right-0 bottom-0 w-1.5 cursor-ew-resize bg-zinc-700/0 hover:bg-blue-500/50 transition-colors group-hover:bg-zinc-700/20 flex items-center justify-center"
+        >
+          <div className="w-1 h-8 rounded-full bg-zinc-500 opacity-0 group-hover:opacity-100" />
+        </div>
+
+        {/* Overlay Label */}
+        <div className="absolute top-3 left-3 px-2 py-1 rounded bg-black/60 text-[10px] text-zinc-300 font-mono backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity">
+          YouTube ID: {id} • Width: {currentWidth}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/** Interactive Editor for the <stat /> component */
+const StatEditor = ({ mdastNode }: JsxEditorProps) => {
+  const updateMdastNode = useMdastNodeUpdater();
+  
+  const attributes = useMemo(() => {
+    const attrs: Record<string, string> = {};
+    (mdastNode.attributes as any[] || []).forEach(attr => {
+       if (attr.name && attr.value !== undefined) attrs[attr.name] = String(attr.value);
+    });
+    return attrs;
+  }, [mdastNode.attributes]);
+
+  const updateAttr = (name: string, value: string) => {
+    const nextAttributes = [...(mdastNode.attributes as any[] || [])];
+    const idx = nextAttributes.findIndex(a => a.name === name);
+    if (idx !== -1) {
+      nextAttributes[idx] = { ...nextAttributes[idx], value };
+    } else {
+      nextAttributes.push({ type: 'mdxJsxAttribute', name, value });
+    }
+    updateMdastNode({ ...mdastNode, attributes: nextAttributes });
+  };
+
+  return (
+    <div
+      contentEditable={false}
+      className="flex flex-col p-4 rounded-xl bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 transition-colors group/stat relative"
+    >
+      <input
+        value={attributes.value || ''}
+        onChange={(e) => updateAttr('value', e.target.value)}
+        placeholder="Value (e.g. $200B+)"
+        className="bg-transparent text-2xl font-bold text-white placeholder:text-zinc-700 outline-none mb-1 relative z-10"
+      />
+      <textarea
+        value={attributes.label || ''}
+        onChange={(e) => updateAttr('label', e.target.value)}
+        placeholder="Label description..."
+        rows={2}
+        className="bg-transparent text-xs text-zinc-400 placeholder:text-zinc-700 outline-none resize-none leading-snug relative z-10"
+      />
+    </div>
+  );
+};
+
+/** Interactive Editor for the <stats-grid /> component */
+const StatsGridEditor = ({ mdastNode }: JsxEditorProps) => {
+  const updateMdastNode = useMdastNodeUpdater();
+
+  // Read stat data directly from mdastNode.children — MDXEditor stores the entire
+  // stats-grid as ONE Lexical node; child <stat> elements are never visited
+  // separately, so we must render and edit them ourselves here.
+  const stats = useMemo(() => {
+    return (mdastNode.children as any[] || []).map((child: any) => {
+      const attrs: Record<string, string> = {};
+      (child.attributes || []).forEach((attr: any) => {
+        if (attr.name) attrs[attr.name] = String(attr.value ?? '');
+      });
+      return attrs;
+    });
+  }, [mdastNode.children]);
+
+  const updateStat = (index: number, name: string, value: string) => {
+    const nextChildren = (mdastNode.children as any[] || []).map((child: any, i: number) => {
+      if (i !== index) return child;
+      const nextAttrs = (child.attributes || []).map((a: any) =>
+        a.name === name ? { ...a, value } : a
+      );
+      if (!nextAttrs.find((a: any) => a.name === name)) {
+        nextAttrs.push({ type: 'mdxJsxAttribute', name, value });
+      }
+      return { ...child, attributes: nextAttrs };
+    });
+    updateMdastNode({ ...mdastNode, children: nextChildren as any });
+  };
+
+  const addStat = () => {
+    const nextChildren = [...(mdastNode.children as any[] || [])];
+    nextChildren.push({
+      type: 'mdxJsxFlowElement',
+      name: 'stat',
+      attributes: [
+        { type: 'mdxJsxAttribute', name: 'value', value: '' },
+        { type: 'mdxJsxAttribute', name: 'label', value: '' }
+      ],
+      children: []
+    } as any);
+    updateMdastNode({ ...mdastNode, children: nextChildren as any });
+  };
+
+  return (
+    <div
+      contentEditable={false}
+      className="my-10 p-6 rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/20 relative group/grid"
+    >
+      <div className="absolute -top-3 left-6 px-2 py-0.5 rounded bg-zinc-800 text-[10px] font-bold text-zinc-400 uppercase tracking-wider select-none z-20">
+        Stats Grid
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat, index) => (
+          <div
+            key={index}
+            className="flex flex-col p-4 rounded-xl bg-zinc-900/50 border border-zinc-800 hover:border-zinc-700 transition-colors"
+          >
+            <input
+              value={stat.value || ''}
+              onChange={(e) => updateStat(index, 'value', e.target.value)}
+              placeholder="Value (e.g. $200B+)"
+              className="bg-transparent text-2xl font-bold text-white placeholder:text-zinc-700 outline-none mb-1"
+            />
+            <textarea
+              value={stat.label || ''}
+              onChange={(e) => updateStat(index, 'label', e.target.value)}
+              placeholder="Label description..."
+              rows={2}
+              className="bg-transparent text-xs text-zinc-400 placeholder:text-zinc-700 outline-none resize-none leading-snug"
+            />
+          </div>
+        ))}
+
+        {/* Add Stat Button */}
+        <button
+          type="button"
+          onClick={addStat}
+          className="flex flex-col items-center justify-center p-6 rounded-xl border border-dashed border-zinc-800
+                     text-zinc-600 hover:text-zinc-400 hover:border-zinc-600 hover:bg-zinc-800/30 transition-all gap-2"
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          <span className="text-[10px] font-bold uppercase tracking-tight">Add Stat</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const youtubeDescriptor: JsxComponentDescriptor = {
+  name: 'youtube',
+  kind: 'flow',
+  props: [
+    { name: 'id', type: 'string' },
+    { name: 'width', type: 'string' }
+  ],
+  hasChildren: false,
+  Editor: YouTubeEditor
+};
+
+const statsGridDescriptor: JsxComponentDescriptor = {
+  name: 'stats-grid',
+  kind: 'flow',
+  hasChildren: true,
+  props: [],
+  Editor: StatsGridEditor
+};
+
+const statDescriptor: JsxComponentDescriptor = {
+  name: 'stat',
+  kind: 'flow',
+  props: [
+    { name: 'value', type: 'string' },
+    { name: 'label', type: 'string' }
+  ],
+  hasChildren: false,
+  Editor: StatEditor
+};
+
 // Plugins are stable for the component's lifetime — defined in useMemo with
 // no dependencies so MDXEditor never re-initialises during normal editing.
 const PLUGINS_DEPS: [] = [];
@@ -112,6 +394,9 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
     imagePlugin(),
     linkPlugin(),
     markdownShortcutPlugin(),
+    jsxPlugin({
+      jsxComponentDescriptors: [youtubeDescriptor, statsGridDescriptor, statDescriptor]
+    }),
     toolbarPlugin({
       toolbarContents: () => (
         <>
@@ -153,6 +438,9 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
   const [showPDFLinkModal, setShowPDFLinkModal] = useState(false);
   const [pendingPDF, setPendingPDF] = useState<{ name: string; url: string } | null>(null);
   const [pdfLinkText, setPdfLinkText] = useState('');
+  
+  const [showYoutubeModal, setShowYoutubeModal] = useState(false);
+  const [youtubeUrl, setYoutubeUrl] = useState('');
 
   const showUploadError = useCallback((msg: string) => {
     setUploadError(msg);
@@ -395,6 +683,26 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
     setShowFeaturedImagePicker(false);
   };
 
+  const insertYoutubeEmbed = () => {
+    if (!youtubeUrl.trim()) return;
+    const rawUrl = youtubeUrl.trim();
+    const id = getYouTubeId(rawUrl);
+    
+    if (!id) {
+      showUploadError('Invalid YouTube URL');
+      return;
+    }
+
+    setShowYoutubeModal(false);
+    
+    setTimeout(() => {
+      editorRef.current?.focus();
+      // Insert as a JSX component for interactive resizing
+      editorRef.current?.insertMarkdown(`\n\n<youtube id="${id}" width="100%" />\n\n`);
+      setYoutubeUrl('');
+    }, 300);
+  };
+
   const insertPDFLink = () => {
     if (!pendingPDF) return;
     
@@ -576,6 +884,20 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
             </svg>
           </button>
 
+          {/* Desktop: Insert YouTube Embed button */}
+          <button
+            type="button"
+            title="Insert YouTube Video"
+            onClick={() => setShowYoutubeModal(true)}
+            className="hidden sm:flex items-center justify-center w-7 h-7 rounded text-zinc-400
+                       hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="6" width="20" height="12" rx="2" ry="2"/>
+              <polygon points="10 9 15 12 10 15 10 9"/>
+            </svg>
+          </button>
+
           {/* Desktop: Upload error toast */}
           {uploadError && (
             <span className="hidden sm:flex items-center gap-1.5 text-[11px] text-red-400 font-medium" title={uploadError}>
@@ -603,6 +925,25 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
               Re-align Last
             </button>
           )}
+
+          {/* Desktop: Stats Grid button */}
+          <button
+            type="button"
+            title="Insert Stats Grid"
+            onClick={() => {
+              editorRef.current?.focus();
+              editorRef.current?.insertMarkdown('\n\n<stats-grid>\n  <stat value="" label="" />\n</stats-grid>\n\n');
+            }}
+            className="hidden sm:flex items-center justify-center w-7 h-7 rounded text-zinc-400
+                       hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+            </svg>
+          </button>
 
           {/* Desktop: Sidebar toggle */}
           <button
@@ -708,6 +1049,21 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
             </svg>
           </button>
 
+          {/* Mobile: Insert YouTube Embed button */}
+          <button
+            type="button"
+            title="Insert YouTube Video"
+            onClick={() => setShowYoutubeModal(true)}
+            className="flex items-center justify-center w-11 h-11 rounded-lg text-zinc-400
+                       active:bg-zinc-800 active:text-zinc-100 transition-colors"
+            style={{ touchAction: 'manipulation' }}
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="6" width="20" height="12" rx="2" ry="2"/>
+              <polygon points="10 9 15 12 10 15 10 9"/>
+            </svg>
+          </button>
+
           {/* Mobile: Preview */}
           <button
             type="button"
@@ -720,6 +1076,26 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178Z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+            </svg>
+          </button>
+
+          {/* Mobile: Stats Grid button */}
+          <button
+            type="button"
+            title="Insert Stats Grid"
+            onClick={() => {
+              editorRef.current?.focus();
+              editorRef.current?.insertMarkdown('\n\n<stats-grid>\n  <stat value="" label="" />\n</stats-grid>\n\n');
+            }}
+            className="flex items-center justify-center w-11 h-11 rounded-lg text-zinc-400
+                       active:bg-zinc-800 active:text-zinc-100 transition-colors"
+            style={{ touchAction: 'manipulation' }}
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
             </svg>
           </button>
 
@@ -1116,6 +1492,54 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
             </header>
             <div className="flex-1 overflow-y-auto p-6">
               <MediaLibrary variant="picker" onSelect={handleSelectFeaturedImage} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── YouTube Embed Modal ────────────────────────────────────────── */}
+      {showYoutubeModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-zinc-100 mb-1">Embed YouTube Video</h3>
+              <p className="text-zinc-500 text-xs mb-6">Paste the YouTube URL below. It will be converted into a playable embed automatically.</p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-medium text-zinc-500 mb-1 uppercase tracking-wider">YouTube URL</label>
+                  <input
+                    autoFocus
+                    value={youtubeUrl}
+                    onChange={(e) => setYoutubeUrl(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        insertYoutubeEmbed();
+                      }
+                    }}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2
+                               text-sm text-zinc-100 placeholder:text-zinc-600
+                               focus:outline-none focus:ring-1 focus:ring-zinc-500 focus:border-zinc-500"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-8 flex gap-3">
+                <button
+                  onClick={() => { setShowYoutubeModal(false); setYoutubeUrl(''); }}
+                  className="flex-1 py-2.5 text-xs font-medium text-zinc-500 hover:text-zinc-300 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={insertYoutubeEmbed}
+                  className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-xs font-bold hover:bg-red-500 transition shadow-lg shadow-red-900/20"
+                >
+                  Embed Video
+                </button>
+              </div>
             </div>
           </div>
         </div>
