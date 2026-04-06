@@ -865,23 +865,34 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
                     </button>
                   </div>
                 )}
-                <label className={`flex items-center justify-center gap-2 w-full py-2 rounded-lg border
-                                   border-dashed border-zinc-700 text-[11px] text-zinc-500
-                                   hover:border-zinc-500 hover:text-zinc-400 cursor-pointer transition
-                                   ${imgUploading ? 'opacity-50 cursor-wait' : ''}`}>
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
-                    className="hidden"
-                    disabled={imgUploading}
-                    onChange={e => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFeaturedImageUpload(file);
-                      e.target.value = '';
-                    }}
-                  />
-                  {imgUploading ? 'Uploading…' : (meta.featuredImage ? 'Replace image' : 'Upload image')}
-                </label>
+                <div className="flex flex-col gap-1.5">
+                  <label className={`flex items-center justify-center gap-2 w-full py-2 rounded-lg border
+                                     border-dashed border-zinc-700 text-[11px] text-zinc-500
+                                     hover:border-zinc-500 hover:text-zinc-400 cursor-pointer transition
+                                     ${imgUploading ? 'opacity-50 cursor-wait' : ''}`}>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                      className="hidden"
+                      disabled={imgUploading}
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFeaturedImageUpload(file);
+                        e.target.value = '';
+                      }}
+                    />
+                    {imgUploading ? 'Uploading…' : (meta.featuredImage ? 'Replace image' : 'Upload image')}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowFeaturedImagePicker(true)}
+                    className="flex items-center justify-center gap-2 w-full py-2 rounded-lg border
+                               border-zinc-700 text-[11px] text-zinc-500
+                               hover:border-zinc-500 hover:text-zinc-400 transition"
+                  >
+                    {meta.featuredImage ? 'Choose different image' : 'Choose from library'}
+                  </button>
+                </div>
               </div>
 
               {/* Tags */}
