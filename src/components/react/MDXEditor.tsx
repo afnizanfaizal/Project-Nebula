@@ -149,6 +149,7 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
   const [lastUploadedUrl, setLastUploadedUrl] = useState<string | null>(null);
   const [showAlignModal, setShowAlignModal] = useState(false);
   const [showMediaBrowser, setShowMediaBrowser] = useState(false);
+  const [showFeaturedImagePicker, setShowFeaturedImagePicker] = useState(false);
   const [showPDFLinkModal, setShowPDFLinkModal] = useState(false);
   const [pendingPDF, setPendingPDF] = useState<{ name: string; url: string } | null>(null);
   const [pdfLinkText, setPdfLinkText] = useState('');
