@@ -388,6 +388,13 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
     }
   };
 
+  const handleSelectFeaturedImage = (image: ImageMetadata) => {
+    // PDFs are not valid featured images — ignore silently
+    if (image.url.toLowerCase().endsWith('.pdf')) return;
+    setMeta(m => ({ ...m, featuredImage: image.url }));
+    setShowFeaturedImagePicker(false);
+  };
+
   const insertPDFLink = () => {
     if (!pendingPDF) return;
     
