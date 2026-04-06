@@ -1100,6 +1100,27 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
           </div>
         </div>
       )}
+
+      {/* ── Featured Image Picker Modal ──────────────────────────────────── */}
+      {showFeaturedImagePicker && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-5xl h-[80vh] bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            <header className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between flex-shrink-0">
+              <h2 className="text-lg font-semibold text-zinc-100">Choose Featured Image</h2>
+              <button
+                onClick={() => setShowFeaturedImagePicker(false)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition"
+              >
+                ✕
+              </button>
+            </header>
+            <div className="flex-1 overflow-y-auto p-6">
+              <MediaLibrary variant="picker" onSelect={handleSelectFeaturedImage} />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── PDF Link Customization Modal ────────────────────────────────── */}
       {showPDFLinkModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm animate-in fade-in duration-200">
