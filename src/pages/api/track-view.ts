@@ -5,7 +5,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   // Parse body
   let slug: string;
   try {
@@ -21,43 +21,25 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400 });
   }
 
-  // 1. Detect Country via Edge Headers (Netlify/Vercel/Cloudflare)
-  // Provides accurate tracking for all countries without any network overhead.
-  const netlifyCountry = request.headers.get('x-country-code');
-  const vercelCountry  = request.headers.get('x-vercel-ip-country');
-  const cfCountry      = request.headers.get('cf-ipcountry');
+  // 1. Detect Country natively (Netlify/Vercel/Cloudflare)
+  // This automatically tracks any country based on the IP address via the hosting provider's edge network,
+  // without the latency of an external API call.
+  // We check Astro.locals.netlify first, then a variety of common edge headers.
+  const netlifyLocalsCountry = (locals as any)?.netlify?.context?.geo?.country?.code;
   
-  let countryCode = (netlifyCountry || vercelCountry || cfCountry || 'XX').toUpperCase();
+  const headerCountry = 
+    request.headers.get('x-country') ||
+    request.headers.get('x-country-code') ||
+    request.headers.get('x-nf-client-connection-ip-country') ||
+    request.headers.get('x-vercel-ip-country') ||
+    request.headers.get('cf-ipcountry');
 
-  // 2. Detect IP Address (Prioritizing Edge-specific headers)
-  const ip =
-    request.headers.get('x-nf-client-connection-ip') ||
-    request.headers.get('x-bb-ip') ||
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    '127.0.0.1';
+  let countryCode = (netlifyLocalsCountry || headerCountry || 'XX').toUpperCase();
 
-  // 3. Fallback to Geo-lookup if country unknown (e.g. Local development)
-  if (countryCode === 'XX') {
-    try {
-      // Local testing override: If on localhost, simulate Malaysia
-      const lookupIp = (import.meta.env.DEV && (ip === '127.0.0.1' || ip === '::1')) ? '210.186.0.0' : ip;
-      
-      const controller = new AbortController();
-      const tid = setTimeout(() => controller.abort(), 1000); // Shortened timeout to 1s
-      const geoRes = await fetch(`https://ipwho.is/${lookupIp}?fields=country_code`, {
-        signal: controller.signal,
-      });
-      clearTimeout(tid);
-      
-      if (geoRes.ok) {
-        const geoData = await geoRes.json();
-        if (typeof geoData.country_code === 'string' && geoData.country_code.length === 2) {
-          countryCode = geoData.country_code.toUpperCase();
-        }
-      }
-    } catch {
-      // Fallback remains 'XX'
+  // Local testing override
+  if (import.meta.env.DEV) {
+    if (countryCode === 'XX') {
+       countryCode = 'MY'; // Simulate Malaysia in local dev to verify it works
     }
   }
 
