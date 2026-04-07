@@ -21,12 +21,15 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400 });
   }
 
-  // 1. Detect Country via Netlify Native Header (Instant & Reliable)
+  // 1. Detect Country via Edge Headers (Netlify/Vercel/Cloudflare)
   // Provides accurate tracking for all countries without any network overhead.
   const netlifyCountry = request.headers.get('x-country-code');
-  let countryCode = netlifyCountry || 'XX';
+  const vercelCountry  = request.headers.get('x-vercel-ip-country');
+  const cfCountry      = request.headers.get('cf-ipcountry');
+  
+  let countryCode = (netlifyCountry || vercelCountry || cfCountry || 'XX').toUpperCase();
 
-  // 2. Detect IP Address (Prioritizing Netlify-specific headers)
+  // 2. Detect IP Address (Prioritizing Edge-specific headers)
   const ip =
     request.headers.get('x-nf-client-connection-ip') ||
     request.headers.get('x-bb-ip') ||
@@ -34,14 +37,14 @@ export const POST: APIRoute = async ({ request }) => {
     request.headers.get('x-real-ip') ||
     '127.0.0.1';
 
-  // 3. Fallback to Geo-lookup if country not provided by Netlify (e.g. Local development)
+  // 3. Fallback to Geo-lookup if country unknown (e.g. Local development)
   if (countryCode === 'XX') {
     try {
       // Local testing override: If on localhost, simulate Malaysia
-      const lookupIp = (import.meta.env.DEV && ip === '127.0.0.1') ? '210.186.0.0' : ip; // 210.186.0.0 is a TM Malaysia IP
+      const lookupIp = (import.meta.env.DEV && (ip === '127.0.0.1' || ip === '::1')) ? '210.186.0.0' : ip;
       
       const controller = new AbortController();
-      const tid = setTimeout(() => controller.abort(), 2000); // Increased timeout to 2s
+      const tid = setTimeout(() => controller.abort(), 1000); // Shortened timeout to 1s
       const geoRes = await fetch(`https://ipwho.is/${lookupIp}?fields=country_code`, {
         signal: controller.signal,
       });
@@ -50,7 +53,7 @@ export const POST: APIRoute = async ({ request }) => {
       if (geoRes.ok) {
         const geoData = await geoRes.json();
         if (typeof geoData.country_code === 'string' && geoData.country_code.length === 2) {
-          countryCode = geoData.country_code;
+          countryCode = geoData.country_code.toUpperCase();
         }
       }
     } catch {

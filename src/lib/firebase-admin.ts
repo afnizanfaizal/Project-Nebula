@@ -25,10 +25,13 @@ export const adminStorage = getStorage(app);
  * Firebase session cookie. checkRevoked=true ensures revoked sessions are
  * rejected even if the cookie hasn't expired yet.
  */
-export async function isValidAdminToken(token: string | undefined): Promise<boolean> {
+export async function isValidAdminToken(
+  token: string | undefined,
+  checkRevoked = false,
+): Promise<boolean> {
   if (!token) return false;
   try {
-    await adminAuth.verifySessionCookie(token, /* checkRevoked */ true);
+    await adminAuth.verifySessionCookie(token, checkRevoked);
     return true;
   } catch {
     return false;

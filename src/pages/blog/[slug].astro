@@ -2,10 +2,13 @@
 export const prerender = false;
 import PostLayout from '../../layouts/PostLayout.astro';
 import ViewCounter from '../../components/react/ViewCounter';
-import { getPost } from '../../lib/firebase-admin.js';
-import { renderMarkdown } from '../../lib/render-markdown.js';
+import { getPost, isValidAdminToken } from '../../lib/firebase-admin.js';
+import { renderMarkdown, type Heading } from '../../lib/render-markdown.js';
 import { getReadingTime } from '../../lib/utils';
 import { Timestamp } from 'firebase-admin/firestore';
+
+// Warm-start cache for rendered markdown to avoid expensive Shiki highlighting on every request
+const htmlCache = new Map<string, { html: string; headings: Heading[]; updatedDate?: number }>();
 
 const { slug } = Astro.params;
 if (!slug) return Astro.redirect('/404');
@@ -13,14 +16,30 @@ if (!slug) return Astro.redirect('/404');
 const post = await getPost(slug);
 if (!post) return Astro.redirect('/404');
 
-// Hide drafts from public — admins bypass via session token
-const { isValidAdminToken } = await import('../../lib/firebase-admin.js');
-const isAdmin = await isValidAdminToken(Astro.cookies.get('admin_session')?.value);
-if (post.draft && !isAdmin) return Astro.redirect('/404');
+// Skip expensive session verification for public posts
+if (post.draft) {
+  const isAdmin = await isValidAdminToken(Astro.cookies.get('admin_session')?.value);
+  if (!isAdmin) return Astro.redirect('/404');
+}
 
-const { html, headings } = await renderMarkdown(post.content ?? '');
+// Use cache if available and post hasn't been updated
+const updatedTs = post.updatedDate instanceof Timestamp ? post.updatedDate.toMillis() : undefined;
+const cached = htmlCache.get(slug);
+
+let html: string;
+let headings: Heading[];
+
+if (cached && cached.updatedDate === updatedTs) {
+  html = cached.html;
+  headings = cached.headings;
+} else {
+  const rendered = await renderMarkdown(post.content ?? '');
+  html = rendered.html;
+  headings = rendered.headings;
+  htmlCache.set(slug, { html, headings, updatedDate: updatedTs });
+}
+
 const minutesRead = getReadingTime(post.content ?? '');
-
 const pubDate = post.pubDate instanceof Timestamp ? post.pubDate.toDate() : new Date(post.pubDate as any);
 const updatedDate = post.updatedDate instanceof Timestamp ? post.updatedDate.toDate() : undefined;
 ---
