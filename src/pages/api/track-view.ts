@@ -21,30 +21,41 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response(JSON.stringify({ error: 'invalid json' }), { status: 400 });
   }
 
-  // Derive visitor IP
+  // 1. Detect Country via Netlify Native Header (Instant & Reliable)
+  // Provides accurate tracking for all countries without any network overhead.
+  const netlifyCountry = request.headers.get('x-country-code');
+  let countryCode = netlifyCountry || 'XX';
+
+  // 2. Detect IP Address (Prioritizing Netlify-specific headers)
   const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    request.headers.get('x-real-ip') ??
+    request.headers.get('x-nf-client-connection-ip') ||
+    request.headers.get('x-bb-ip') ||
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
     '127.0.0.1';
 
-  // Geo-lookup via ipwho.is (HTTPS, free tier ~10k req/month, 500ms timeout).
-  // Falls back to 'XX' on any error — view is always recorded regardless.
-  let countryCode = 'XX';
-  try {
-    const controller = new AbortController();
-    const tid = setTimeout(() => controller.abort(), 500);
-    const geoRes = await fetch(`https://ipwho.is/${ip}?fields=country_code`, {
-      signal: controller.signal,
-    });
-    clearTimeout(tid);
-    if (geoRes.ok) {
-      const geoData = await geoRes.json();
-      if (typeof geoData.country_code === 'string' && geoData.country_code.length === 2) {
-        countryCode = geoData.country_code;
+  // 3. Fallback to Geo-lookup if country not provided by Netlify (e.g. Local development)
+  if (countryCode === 'XX') {
+    try {
+      // Local testing override: If on localhost, simulate Malaysia
+      const lookupIp = (import.meta.env.DEV && ip === '127.0.0.1') ? '210.186.0.0' : ip; // 210.186.0.0 is a TM Malaysia IP
+      
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 2000); // Increased timeout to 2s
+      const geoRes = await fetch(`https://ipwho.is/${lookupIp}?fields=country_code`, {
+        signal: controller.signal,
+      });
+      clearTimeout(tid);
+      
+      if (geoRes.ok) {
+        const geoData = await geoRes.json();
+        if (typeof geoData.country_code === 'string' && geoData.country_code.length === 2) {
+          countryCode = geoData.country_code;
+        }
       }
+    } catch {
+      // Fallback remains 'XX'
     }
-  } catch {
-    // Geo failure is non-fatal — view is still recorded under 'XX'
   }
 
   // UTC date key
