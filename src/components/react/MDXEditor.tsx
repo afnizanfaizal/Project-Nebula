@@ -27,27 +27,27 @@ import MediaLibrary, { type ImageMetadata } from './MediaLibrary';
 
 // ── Sidebar types ────────────────────────────────────────────────────────────
 interface SidebarMeta {
-  title:         string;
-  description:   string;
+  title: string;
+  description: string;
   featuredImage: string;
-  tags:          string[];
-  status:        'draft' | 'published';
-  featured:      boolean;
-  isProject:     boolean;
-  pubDate:       string; // YYYY-MM-DD
+  tags: string[];
+  status: 'draft' | 'published';
+  featured: boolean;
+  isProject: boolean;
+  pubDate: string; // YYYY-MM-DD
 }
 
 const todayISO = new Date().toISOString().slice(0, 10);
 
 const EMPTY_META: SidebarMeta = {
-  title:         '',
-  description:   '',
+  title: '',
+  description: '',
   featuredImage: '',
-  tags:          [],
-  status:        'draft',
-  featured:      false,
-  isProject:     false,
-  pubDate:       todayISO,
+  tags: [],
+  status: 'draft',
+  featured: false,
+  isProject: false,
+  pubDate: todayISO,
 };
 
 // ── Editor constants ─────────────────────────────────────────────────────────
@@ -100,7 +100,7 @@ function getYouTubeId(url: string): string | null {
 /** Custom Interactive Editor for the <youtube /> component */
 const YouTubeEditor = ({ mdastNode }: JsxEditorProps) => {
   const updateMdastNode = useMdastNodeUpdater();
-  
+
   // Helper to extract attributes from MDAST node
   const attributes = useMemo(() => {
     const attrs: Record<string, string> = {};
@@ -183,7 +183,7 @@ const YouTubeEditor = ({ mdastNode }: JsxEditorProps) => {
           className={`w-full h-full ${isResizing ? 'pointer-events-none' : ''}`}
           title="YouTube Video Preview"
         />
-        
+
         {/* Resize Handle */}
         <div
           onMouseDown={handleMouseDown}
@@ -204,11 +204,11 @@ const YouTubeEditor = ({ mdastNode }: JsxEditorProps) => {
 /** Interactive Editor for the <stat /> component */
 const StatEditor = ({ mdastNode }: JsxEditorProps) => {
   const updateMdastNode = useMdastNodeUpdater();
-  
+
   const attributes = useMemo(() => {
     const attrs: Record<string, string> = {};
     (mdastNode.attributes as any[] || []).forEach(attr => {
-       if (attr.name && attr.value !== undefined) attrs[attr.name] = String(attr.value);
+      if (attr.name && attr.value !== undefined) attrs[attr.name] = String(attr.value);
     });
     return attrs;
   }, [mdastNode.attributes]);
@@ -378,7 +378,7 @@ interface Props {
 }
 
 export default function BlogEditor({ slug: initialSlug = '' }: Props) {
-  const editorRef    = useRef<MDXEditorMethods>(null);
+  const editorRef = useRef<MDXEditorMethods>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const plugins = useMemo(() => [
@@ -407,7 +407,7 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
         </>
       ),
     }),
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   ], PLUGINS_DEPS);
 
   const [seedMarkdown, setSeedMarkdown] = useState(() => stripBrokenImages(INITIAL_MARKDOWN));
@@ -421,16 +421,16 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
   const [loading, setLoading] = useState(Boolean(initialSlug));
 
   // Sidebar state
-  const [meta, setMeta]               = useState<SidebarMeta>(EMPTY_META);
+  const [meta, setMeta] = useState<SidebarMeta>(EMPTY_META);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 640 : false);
   const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 640 : true);
-  const [tagInput, setTagInput]       = useState('');
+  const [tagInput, setTagInput] = useState('');
   const [imgUploading, setImgUploading] = useState(false);
   // Toast for inline upload errors (replaces native alert())
   const [uploadError, setUploadError] = useState('');
 
   // Image alignment modal state
-  const [pendingImgUrl, setPendingImgUrl]   = useState<string | null>(null);
+  const [pendingImgUrl, setPendingImgUrl] = useState<string | null>(null);
   const [lastUploadedUrl, setLastUploadedUrl] = useState<string | null>(null);
   const [showAlignModal, setShowAlignModal] = useState(false);
   const [showMediaBrowser, setShowMediaBrowser] = useState(false);
@@ -438,7 +438,7 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
   const [showPDFLinkModal, setShowPDFLinkModal] = useState(false);
   const [pendingPDF, setPendingPDF] = useState<{ name: string; url: string } | null>(null);
   const [pdfLinkText, setPdfLinkText] = useState('');
-  
+
   const [showYoutubeModal, setShowYoutubeModal] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState('');
 
@@ -482,14 +482,14 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
           setSeedMarkdown(clean);
           setSlug(data.meta.slug);
           setMeta({
-            title:         data.meta.title,
-            description:   data.meta.description,
+            title: data.meta.title,
+            description: data.meta.description,
             featuredImage: data.meta.featuredImage,
-            tags:          data.meta.tags,
-            status:        data.meta.status,
-            featured:      data.meta.featured ?? false,
-            isProject:     data.meta.isProject ?? false,
-            pubDate:       data.meta.pubDate,
+            tags: data.meta.tags,
+            status: data.meta.status,
+            featured: data.meta.featured ?? false,
+            isProject: data.meta.isProject ?? false,
+            pubDate: data.meta.pubDate,
           });
           // Editor is already mounted — call setMarkdown directly.
           editorRef.current?.setMarkdown(clean);
@@ -511,7 +511,7 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
 
     const fromEditor = editorRef.current?.getMarkdown();
     const contentToSave = fromEditor || latestMarkdownRef.current;
-    
+
     // Don't autosave if nothing changed
     if (isAutosave && contentToSave === seedMarkdown) return false;
 
@@ -583,7 +583,7 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
   // Autosave effect: debounce 5 seconds
   useEffect(() => {
     if (!slug || !meta.title) return;
-    
+
     const timer = setTimeout(() => {
       const fromEditor = editorRef.current?.getMarkdown();
       const current = fromEditor || latestMarkdownRef.current;
@@ -645,9 +645,9 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
       const res = await fetch('/api/admin/upload-image', { method: 'POST', body: form });
       const data = await res.json() as { url?: string; error?: string };
       if (!res.ok || !data.url) throw new Error(data.error ?? 'Upload failed');
-      
+
       const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-      
+
       if (isPdf) {
         setPendingPDF({ name: file.name, url: data.url });
         setPdfLinkText(file.name);
@@ -687,14 +687,14 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
     if (!youtubeUrl.trim()) return;
     const rawUrl = youtubeUrl.trim();
     const id = getYouTubeId(rawUrl);
-    
+
     if (!id) {
       showUploadError('Invalid YouTube URL');
       return;
     }
 
     setShowYoutubeModal(false);
-    
+
     setTimeout(() => {
       editorRef.current?.focus();
       // Insert as a JSX component for interactive resizing
@@ -705,19 +705,19 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
 
   const insertPDFLink = () => {
     if (!pendingPDF) return;
-    
+
     const { url, name } = pendingPDF;
     const text = pdfLinkText.trim() || name;
-    
+
     // Close modal first to remove focus trap
     setShowPDFLinkModal(false);
-    
+
     setTimeout(() => {
       console.log(`[BlogEditor] Attempting to insert PDF link: [${text}](${url})`);
       // Focus MUST happen right before insertion in the timeout
       editorRef.current?.focus();
       editorRef.current?.insertMarkdown(` \n\n[${text}](${url})\n\n `);
-      
+
       setPendingPDF(null);
       setPdfLinkText('');
     }, 300);
@@ -751,12 +751,12 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
     form.target = '_blank';
 
     const fields = {
-      title:         meta.title || 'Untitled Preview',
-      content:       content,
-      description:   meta.description,
-      tags:          meta.tags.join(','),
+      title: meta.title || 'Untitled Preview',
+      content: content,
+      description: meta.description,
+      tags: meta.tags.join(','),
       featuredImage: meta.featuredImage,
-      pubDate:       meta.pubDate,
+      pubDate: meta.pubDate,
     };
 
     Object.entries(fields).forEach(([key, val]) => {
@@ -893,8 +893,8 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
                        hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="6" width="20" height="12" rx="2" ry="2"/>
-              <polygon points="10 9 15 12 10 15 10 9"/>
+              <rect x="2" y="6" width="20" height="12" rx="2" ry="2" />
+              <polygon points="10 9 15 12 10 15 10 9" />
             </svg>
           </button>
 
@@ -952,12 +952,12 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
             onClick={() => setSidebarOpen(o => !o)}
             className={`hidden sm:flex items-center justify-center w-7 h-7 rounded transition-colors
                         ${sidebarOpen
-                          ? 'text-zinc-100 bg-zinc-700'
-                          : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'}`}
+                ? 'text-zinc-100 bg-zinc-700'
+                : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'}`}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2"/>
-              <path d="M15 3v18"/>
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M15 3v18" />
             </svg>
           </button>
 
@@ -1059,8 +1059,8 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
             style={{ touchAction: 'manipulation' }}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="6" width="20" height="12" rx="2" ry="2"/>
-              <polygon points="10 9 15 12 10 15 10 9"/>
+              <rect x="2" y="6" width="20" height="12" rx="2" ry="2" />
+              <polygon points="10 9 15 12 10 15 10 9" />
             </svg>
           </button>
 
@@ -1106,13 +1106,13 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
             onClick={() => setSidebarOpen(o => !o)}
             className={`flex items-center justify-center w-11 h-11 rounded-lg transition-colors
                         ${sidebarOpen
-                          ? 'text-zinc-100 bg-zinc-700'
-                          : 'text-zinc-400 active:bg-zinc-800 active:text-zinc-100'}`}
+                ? 'text-zinc-100 bg-zinc-700'
+                : 'text-zinc-400 active:bg-zinc-800 active:text-zinc-100'}`}
             style={{ touchAction: 'manipulation' }}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2"/>
-              <path d="M15 3v18"/>
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M15 3v18" />
             </svg>
           </button>
         </div>
@@ -1181,234 +1181,234 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
               )}
               <div className="p-5 space-y-5 overflow-y-auto flex-1">
 
-              {/* Title */}
-              <div>
-                <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
-                  Title
-                </label>
-                <input
-                  value={meta.title}
-                  onChange={e => handleTitleChange(e.target.value)}
-                  placeholder="Post title"
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2
+                {/* Title */}
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
+                    Title
+                  </label>
+                  <input
+                    value={meta.title}
+                    onChange={e => handleTitleChange(e.target.value)}
+                    placeholder="Post title"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2
                              text-sm text-zinc-100 placeholder:text-zinc-600
                              focus:outline-none focus:ring-1 focus:ring-zinc-500 focus:border-zinc-500
                              transition"
-                />
-              </div>
+                  />
+                </div>
 
-              {/* Description */}
-              <div>
-                <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
-                  Description
-                </label>
-                <textarea
-                  value={meta.description}
-                  onChange={e => setMeta(m => ({ ...m, description: e.target.value }))}
-                  placeholder="Short summary for meta and previews"
-                  rows={3}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2
+                {/* Description */}
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
+                    Description
+                  </label>
+                  <textarea
+                    value={meta.description}
+                    onChange={e => setMeta(m => ({ ...m, description: e.target.value }))}
+                    placeholder="Short summary for meta and previews"
+                    rows={3}
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2
                              text-sm text-zinc-100 placeholder:text-zinc-600 resize-none
                              focus:outline-none focus:ring-1 focus:ring-zinc-500 focus:border-zinc-500
                              transition"
-                />
-              </div>
+                  />
+                </div>
 
-              {/* Featured Image */}
-              <div>
-                <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
-                  Featured Image
-                </label>
-                {meta.featuredImage && (
-                  <div className="relative mb-2">
-                    <img
-                      src={meta.featuredImage}
-                      alt="Featured"
-                      className="w-full rounded-lg border border-zinc-700 object-cover"
-                      style={{ maxHeight: 160, minHeight: 60, background: '#27272a' }}
-                      onError={e => {
-                        (e.currentTarget as HTMLImageElement).style.minHeight = '60px';
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setMeta(m => ({ ...m, featuredImage: '' }))}
-                      className="absolute top-1.5 right-1.5 w-5 h-5 rounded bg-zinc-900/80
+                {/* Featured Image */}
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
+                    Featured Image
+                  </label>
+                  {meta.featuredImage && (
+                    <div className="relative mb-2">
+                      <img
+                        src={meta.featuredImage}
+                        alt="Featured"
+                        className="w-full rounded-lg border border-zinc-700 object-cover"
+                        style={{ maxHeight: 160, minHeight: 60, background: '#27272a' }}
+                        onError={e => {
+                          (e.currentTarget as HTMLImageElement).style.minHeight = '60px';
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setMeta(m => ({ ...m, featuredImage: '' }))}
+                        className="absolute top-1.5 right-1.5 w-5 h-5 rounded bg-zinc-900/80
                                  text-zinc-400 hover:text-zinc-100 flex items-center justify-center text-xs"
-                      title="Remove image"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                )}
-                <div className="flex flex-col gap-1.5">
-                  <label className={`flex items-center justify-center gap-2 w-full py-2 rounded-lg border
+                        title="Remove image"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-1.5">
+                    <label className={`flex items-center justify-center gap-2 w-full py-2 rounded-lg border
                                      border-dashed border-zinc-700 text-[11px] text-zinc-500
                                      hover:border-zinc-500 hover:text-zinc-400 cursor-pointer transition
                                      ${imgUploading ? 'opacity-50 cursor-wait' : ''}`}>
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
-                      className="hidden"
-                      disabled={imgUploading}
-                      onChange={e => {
-                        const file = e.target.files?.[0];
-                        if (file) handleFeaturedImageUpload(file);
-                        e.target.value = '';
-                      }}
-                    />
-                    {imgUploading ? 'Uploading…' : (meta.featuredImage ? 'Replace image' : 'Upload image')}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setShowFeaturedImagePicker(true)}
-                    className="flex items-center justify-center gap-2 w-full py-2 rounded-lg border
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                        className="hidden"
+                        disabled={imgUploading}
+                        onChange={e => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFeaturedImageUpload(file);
+                          e.target.value = '';
+                        }}
+                      />
+                      {imgUploading ? 'Uploading…' : (meta.featuredImage ? 'Replace image' : 'Upload image')}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowFeaturedImagePicker(true)}
+                      className="flex items-center justify-center gap-2 w-full py-2 rounded-lg border
                                border-zinc-700 text-[11px] text-zinc-500
                                hover:border-zinc-500 hover:text-zinc-400 transition"
-                  >
-                    {meta.featuredImage ? 'Choose different image' : 'Choose from library'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Tags */}
-              <div>
-                <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
-                  Tags
-                </label>
-                {meta.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    {meta.tags.map(tag => (
-                      <span key={tag} className="flex items-center gap-1 px-2 py-0.5 rounded-full
-                                                 bg-zinc-800 border border-zinc-700 text-[11px] text-zinc-300">
-                        {tag}
-                        <button
-                          type="button"
-                          onClick={() => removeTag(tag)}
-                          className="text-zinc-500 hover:text-zinc-300 leading-none"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
+                    >
+                      {meta.featuredImage ? 'Choose different image' : 'Choose from library'}
+                    </button>
                   </div>
-                )}
-                <input
-                  value={tagInput}
-                  onChange={e => setTagInput(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' || e.key === ',') {
-                      e.preventDefault();
-                      addTag(tagInput);
-                    }
-                  }}
-                  onBlur={() => { if (tagInput.trim()) addTag(tagInput); }}
-                  placeholder="Add tag, press Enter"
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
+                    Tags
+                  </label>
+                  {meta.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {meta.tags.map(tag => (
+                        <span key={tag} className="flex items-center gap-1 px-2 py-0.5 rounded-full
+                                                 bg-zinc-800 border border-zinc-700 text-[11px] text-zinc-300">
+                          {tag}
+                          <button
+                            type="button"
+                            onClick={() => removeTag(tag)}
+                            className="text-zinc-500 hover:text-zinc-300 leading-none"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <input
+                    value={tagInput}
+                    onChange={e => setTagInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === ',') {
+                        e.preventDefault();
+                        addTag(tagInput);
+                      }
+                    }}
+                    onBlur={() => { if (tagInput.trim()) addTag(tagInput); }}
+                    placeholder="Add tag, press Enter"
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2
                              text-sm text-zinc-100 placeholder:text-zinc-600
                              focus:outline-none focus:ring-1 focus:ring-zinc-500 focus:border-zinc-500
                              transition"
-                />
-              </div>
-
-              {/* Status */}
-              <div>
-                <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
-                  Status
-                </label>
-                <div className="flex rounded-lg border border-zinc-700 overflow-hidden">
-                  {(['draft', 'published'] as const).map(s => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setMeta(m => ({ ...m, status: s }))}
-                      className={`flex-1 py-2 text-[11px] font-medium capitalize transition
-                                  ${meta.status === s
-                                    ? 'bg-zinc-700 text-zinc-100'
-                                    : 'bg-transparent text-zinc-500 hover:text-zinc-300'}`}
-                    >
-                      {s}
-                    </button>
-                  ))}
+                  />
                 </div>
-              </div>
 
-              {/* Featured */}
-              <div>
-                <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
-                  Featured
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setMeta(m => ({ ...m, featured: !m.featured }))}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border transition
-                              ${ meta.featured
-                                ? 'bg-purple-950/40 border-purple-700/60 text-purple-300'
-                                : 'bg-zinc-800 border-zinc-700 text-zinc-500 hover:text-zinc-300' }`}
-                >
-                  <span className="text-[11px] font-medium">
-                    {meta.featured ? 'Featured on homepage' : 'Not featured'}
-                  </span>
-                  <span className={`w-4 h-4 rounded-sm border flex items-center justify-center transition
-                                    ${ meta.featured
-                                      ? 'bg-purple-500 border-purple-400'
-                                      : 'border-zinc-600' }`}>
-                    {meta.featured && (
-                      <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M2 6l3 3 5-5"/>
-                      </svg>
-                    )}
-                  </span>
-                </button>
-              </div>
+                {/* Status */}
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
+                    Status
+                  </label>
+                  <div className="flex rounded-lg border border-zinc-700 overflow-hidden">
+                    {(['draft', 'published'] as const).map(s => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setMeta(m => ({ ...m, status: s }))}
+                        className={`flex-1 py-2 text-[11px] font-medium capitalize transition
+                                  ${meta.status === s
+                            ? 'bg-zinc-700 text-zinc-100'
+                            : 'bg-transparent text-zinc-500 hover:text-zinc-300'}`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-              {/* Project Status */}
-              <div>
-                <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
-                  Project Post
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setMeta(m => ({ ...m, isProject: !m.isProject }))}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border transition
-                              ${ meta.isProject
-                                ? 'bg-blue-950/40 border-blue-700/60 text-blue-300'
-                                : 'bg-zinc-800 border-zinc-700 text-zinc-500 hover:text-zinc-300' }`}
-                >
-                  <span className="text-[11px] font-medium">
-                    {meta.isProject ? 'Listed on Projects page' : 'Regular post'}
-                  </span>
-                  <span className={`w-4 h-4 rounded-sm border flex items-center justify-center transition
-                                    ${ meta.isProject
-                                      ? 'bg-blue-500 border-blue-400'
-                                      : 'border-zinc-600' }`}>
-                    {meta.isProject && (
-                      <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M2 6l3 3 5-5"/>
-                      </svg>
-                    )}
-                  </span>
-                </button>
-              </div>
+                {/* Featured */}
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
+                    Featured
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setMeta(m => ({ ...m, featured: !m.featured }))}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border transition
+                              ${meta.featured
+                        ? 'bg-purple-950/40 border-purple-700/60 text-purple-300'
+                        : 'bg-zinc-800 border-zinc-700 text-zinc-500 hover:text-zinc-300'}`}
+                  >
+                    <span className="text-[11px] font-medium">
+                      {meta.featured ? 'Featured on homepage' : 'Not featured'}
+                    </span>
+                    <span className={`w-4 h-4 rounded-sm border flex items-center justify-center transition
+                                    ${meta.featured
+                        ? 'bg-purple-500 border-purple-400'
+                        : 'border-zinc-600'}`}>
+                      {meta.featured && (
+                        <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M2 6l3 3 5-5" />
+                        </svg>
+                      )}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Project Status */}
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
+                    Project Post
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setMeta(m => ({ ...m, isProject: !m.isProject }))}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border transition
+                              ${meta.isProject
+                        ? 'bg-blue-950/40 border-blue-700/60 text-blue-300'
+                        : 'bg-zinc-800 border-zinc-700 text-zinc-500 hover:text-zinc-300'}`}
+                  >
+                    <span className="text-[11px] font-medium">
+                      {meta.isProject ? 'Listed on Projects page' : 'Regular post'}
+                    </span>
+                    <span className={`w-4 h-4 rounded-sm border flex items-center justify-center transition
+                                    ${meta.isProject
+                        ? 'bg-blue-500 border-blue-400'
+                        : 'border-zinc-600'}`}>
+                      {meta.isProject && (
+                        <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M2 6l3 3 5-5" />
+                        </svg>
+                      )}
+                    </span>
+                  </button>
+                </div>
 
 
-              {/* Pub Date */}
-              <div>
-                <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
-                  Publish Date
-                </label>
-                <input
-                  type="date"
-                  value={meta.pubDate}
-                  onChange={e => setMeta(m => ({ ...m, pubDate: e.target.value }))}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2
+                {/* Pub Date */}
+                <div>
+                  <label className="block text-[11px] font-medium text-zinc-400 mb-1.5 uppercase tracking-wider">
+                    Publish Date
+                  </label>
+                  <input
+                    type="date"
+                    value={meta.pubDate}
+                    onChange={e => setMeta(m => ({ ...m, pubDate: e.target.value }))}
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2
                              text-sm text-zinc-100
                              focus:outline-none focus:ring-1 focus:ring-zinc-500 focus:border-zinc-500
                              transition [color-scheme:dark]"
-                />
-              </div>
+                  />
+                </div>
 
-            </div>
+              </div>
             </aside>
           </>
         )}
@@ -1421,13 +1421,13 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
             <div className="p-6">
               <h3 className="text-lg font-semibold text-zinc-100 mb-1">Text Wrap & Alignment</h3>
               <p className="text-zinc-500 text-xs mb-6">Choose how the image sits relative to your text.</p>
-              
+
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { id: 'none',   label: 'Full Width', desc: 'No wrap', icon: 'M4 6h16M4 12h16M4 18h16' },
-                  { id: 'left',   label: 'Left Wrap',  desc: 'Text on right', icon: 'M4 6h8M4 12h8M4 18h8M16 6h4v12h-4z' },
-                  { id: 'right',  label: 'Right Wrap', desc: 'Text on left', icon: 'M12 6h8M12 12h8M12 18h8M4 6h4v12H4z' },
-                  { id: 'center', label: 'Centered',   desc: 'Middle of page', icon: 'M8 6h8M8 12h8M8 18h8' },
+                  { id: 'none', label: 'Full Width', desc: 'No wrap', icon: 'M4 6h16M4 12h16M4 18h16' },
+                  { id: 'left', label: 'Left Wrap', desc: 'Text on right', icon: 'M4 6h8M4 12h8M4 18h8M16 6h4v12h-4z' },
+                  { id: 'right', label: 'Right Wrap', desc: 'Text on left', icon: 'M12 6h8M12 12h8M12 18h8M4 6h4v12H4z' },
+                  { id: 'center', label: 'Centered', desc: 'Middle of page', icon: 'M8 6h8M8 12h8M8 18h8' },
                 ].map((opt) => (
                   <button
                     key={opt.id}
@@ -1504,7 +1504,7 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
             <div className="p-6">
               <h3 className="text-lg font-semibold text-zinc-100 mb-1">Embed YouTube Video</h3>
               <p className="text-zinc-500 text-xs mb-6">Paste the YouTube URL below. It will be converted into a playable embed automatically.</p>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-[10px] font-medium text-zinc-500 mb-1 uppercase tracking-wider">YouTube URL</label>
@@ -1552,7 +1552,7 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
             <div className="p-6">
               <h3 className="text-lg font-semibold text-zinc-100 mb-1">Insert PDF Link</h3>
               <p className="text-zinc-500 text-xs mb-6">Type the text that readers will click on.</p>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-[10px] font-medium text-zinc-500 mb-1 uppercase tracking-wider">Link Text</label>

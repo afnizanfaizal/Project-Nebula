@@ -98,6 +98,11 @@ const Icon = {
       <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
     </svg>
   ),
+  Folder: (p: { className?: string }) => (
+    <svg className={p.className ?? 'w-4 h-4'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
+    </svg>
+  ),
 };
 
 // ── Recharts custom tooltip ──────────────────────────────────────────
@@ -370,6 +375,13 @@ function PostsTable({
   emptyButtonLabel: string;
   onDeleteRequest: (post: PostData) => void;
 }) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(posts.length / itemsPerPage);
+  const validPage = Math.max(1, Math.min(currentPage, totalPages || 1));
+  const startIndex = (validPage - 1) * itemsPerPage;
+  const paginatedPosts = posts.slice(startIndex, startIndex + itemsPerPage);
+
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden mb-8">
       <div className="px-5 py-4 border-b border-zinc-800">
@@ -417,7 +429,7 @@ function PostsTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800">
-              {posts.map((post) => (
+              {paginatedPosts.map((post) => (
                 <tr key={post.slug} className="hover:bg-zinc-800/30 transition-colors group">
                   <td className="px-5 py-4">
                     <p className="text-sm font-medium text-zinc-100 leading-snug">{post.title}</p>
@@ -483,6 +495,32 @@ function PostsTable({
               ))}
             </tbody>
           </table>
+          
+          {totalPages > 1 && (
+            <div className="px-5 py-3 border-t border-zinc-800 flex items-center justify-between bg-zinc-900/50">
+              <span className="text-xs text-zinc-500">
+                Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, posts.length)} of {posts.length} entries
+              </span>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  disabled={validPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  className="px-2 py-1 rounded border border-zinc-700 text-xs font-medium text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-zinc-800 cursor-pointer"
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  disabled={validPage === totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  className="px-2 py-1 rounded border border-zinc-700 text-xs font-medium text-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-zinc-800 cursor-pointer"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -497,7 +535,6 @@ function PostsSection({
   onDeleteRequest: (post: PostData) => void;
 }) {
   const regularPosts = posts.filter(p => !p.isProject && !p.tags.some(t => t.toLowerCase() === 'project'));
-  const projectPosts = posts.filter(p => p.isProject || p.tags.some(t => t.toLowerCase() === 'project'));
 
   return (
     <div className="max-w-6xl">
@@ -508,6 +545,21 @@ function PostsSection({
         emptyButtonLabel="Create your first post"
         onDeleteRequest={onDeleteRequest}
       />
+    </div>
+  );
+}
+
+function ProjectsSection({
+  posts,
+  onDeleteRequest,
+}: {
+  posts: PostData[];
+  onDeleteRequest: (post: PostData) => void;
+}) {
+  const projectPosts = posts.filter(p => p.isProject || p.tags.some(t => t.toLowerCase() === 'project'));
+
+  return (
+    <div className="max-w-6xl">
       <PostsTable
         title="Projects"
         posts={projectPosts}
@@ -552,10 +604,10 @@ function AboutSection() {
 }
 
 export default function AdminDashboard({ posts: initialPosts, viewsChart, topCountries }: Props) {
-  const [section, setSection] = useState<'overview' | 'posts' | 'media' | 'about'>(() => {
+  const [section, setSection] = useState<'overview' | 'posts' | 'projects' | 'media' | 'about'>(() => {
     if (typeof window !== 'undefined') {
       const tab = new URLSearchParams(window.location.search).get('tab');
-      if (tab === 'posts' || tab === 'media' || tab === 'overview' || tab === 'about') return tab as 'overview' | 'posts' | 'media' | 'about';
+      if (tab === 'posts' || tab === 'projects' || tab === 'media' || tab === 'overview' || tab === 'about') return tab as 'overview' | 'posts' | 'projects' | 'media' | 'about';
     }
     return 'overview';
   });
@@ -609,6 +661,7 @@ export default function AdminDashboard({ posts: initialPosts, viewsChart, topCou
   const navItems = [
     { id: 'overview' as const, label: 'Overview', icon: <Icon.Grid /> },
     { id: 'posts' as const, label: 'Posts', icon: <Icon.Document /> },
+    { id: 'projects' as const, label: 'Projects', icon: <Icon.Folder /> },
     { id: 'media' as const, label: 'Media', icon: <Icon.Photo /> },
   ];
 
@@ -765,6 +818,12 @@ export default function AdminDashboard({ posts: initialPosts, viewsChart, topCou
           )}
           {section === 'posts' && (
             <PostsSection
+              posts={posts}
+              onDeleteRequest={setDeleteTarget}
+            />
+          )}
+          {section === 'projects' && (
+            <ProjectsSection
               posts={posts}
               onDeleteRequest={setDeleteTarget}
             />
