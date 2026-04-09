@@ -228,6 +228,61 @@
   color: #e4e4e7 !important;
 }
 
+/* ── MDXEditor table plugin overrides ───────────────────────────────────────
+   Targets the table rendered inside the content-editable area and the
+   floating column/row add buttons that the tablePlugin renders.             */
+
+/* Table wrapper */
+[class*="_tableEditor_"] table,
+[class*="_tableNode_"] table {
+  border-collapse: collapse !important;
+  width: 100% !important;
+}
+
+/* Header & data cells */
+[class*="_tableEditor_"] th,
+[class*="_tableEditor_"] td,
+[class*="_tableNode_"] th,
+[class*="_tableNode_"] td {
+  background-color: #18181b !important;
+  border: 1px solid #3f3f46 !important;
+  color: #e4e4e7 !important;
+  padding: 6px 10px !important;
+  min-width: 80px !important;
+}
+
+/* Header cells slightly lighter */
+[class*="_tableEditor_"] th,
+[class*="_tableNode_"] th {
+  background-color: #27272a !important;
+  font-weight: 600 !important;
+}
+
+/* Cell focused / selected state */
+[class*="_tableEditor_"] td[class*="_selected_"],
+[class*="_tableEditor_"] th[class*="_selected_"],
+[class*="_tableNode_"] td[class*="_selected_"],
+[class*="_tableNode_"] th[class*="_selected_"] {
+  background-color: #3f3f46 !important;
+  outline: 1px solid #71717a !important;
+}
+
+/* Add-row / add-column buttons */
+[class*="_addRowButton_"],
+[class*="_addColumnButton_"],
+[class*="_tableToolbar_"] button {
+  background-color: #27272a !important;
+  color: #a1a1aa !important;
+  border: 1px solid #3f3f46 !important;
+}
+
+[class*="_addRowButton_"]:hover,
+[class*="_addColumnButton_"]:hover,
+[class*="_tableToolbar_"] button:hover {
+  background-color: #3f3f46 !important;
+  color: #ffffff !important;
+}
+
 @layer utilities {
   .font-mono {
     font-feature-settings: 'liga' 0, 'calt' 0;

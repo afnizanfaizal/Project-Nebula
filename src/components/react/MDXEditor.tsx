@@ -21,6 +21,8 @@ import {
   type JsxComponentDescriptor,
   useMdastNodeUpdater,
   type JsxEditorProps,
+  tablePlugin,
+  InsertTable,
 } from '@mdxeditor/editor';
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import MediaLibrary, { type ImageMetadata } from './MediaLibrary';
@@ -380,6 +382,7 @@ interface Props {
 export default function BlogEditor({ slug: initialSlug = '' }: Props) {
   const editorRef = useRef<MDXEditorMethods>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
 
   const plugins = useMemo(() => [
     headingsPlugin(),
@@ -397,6 +400,7 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
     jsxPlugin({
       jsxComponentDescriptors: [youtubeDescriptor, statsGridDescriptor, statDescriptor]
     }),
+    tablePlugin(),
     toolbarPlugin({
       toolbarContents: () => (
         <>
@@ -404,6 +408,7 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
           <BoldItalicUnderlineToggles />
           <BlockTypeSelect />
           <InsertCodeBlock />
+          <InsertTable />
         </>
       ),
     }),
@@ -635,6 +640,67 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
   const removeTag = (tag: string) => {
     setMeta(m => ({ ...m, tags: m.tags.filter(t => t !== tag) }));
   };
+
+  const handleEditorPaste = useCallback((e: React.ClipboardEvent<HTMLDivElement> | ClipboardEvent) => {
+    const clipboardData = (e as React.ClipboardEvent).clipboardData || (e as ClipboardEvent).clipboardData;
+    if (!clipboardData) return;
+
+    // 1. Try to see if it's an image copied from browser ("Copy Image")
+    const html = clipboardData.getData('text/html');
+    let urlToUse: string | null = null;
+
+    if (html) {
+      // If the clipboard HTML is mostly just an <img> tag without a lot of text,
+      // intercept it and extract the true source URL
+      const textOnly = html.replace(/<[^>]+>/g, '').trim();
+      // Relaxed length check - sometimes captions or attribution links come along
+      if (textOnly.length < 250) {
+        const match = html.match(/<img[^>]+src=["']([^"'>]+)["']/i);
+        const url = match?.[1];
+
+        if (url && (
+          url.includes('images.pexels.com') || 
+          url.includes('unsplash.com') || 
+          url.includes('plus.unsplash.com') ||
+          /^https?:\/\/.*\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(url)
+        )) {
+          urlToUse = url;
+        }
+      }
+    }
+
+    // 2. Try to see if it's a raw image URL being pasted directly
+    if (!urlToUse) {
+      const plainText = clipboardData.getData('text/plain').trim();
+      if (
+        /^https?:\/\/.*\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(plainText) ||
+        plainText.includes('images.pexels.com') ||
+        plainText.includes('unsplash.com') ||
+        plainText.includes('images.unsplash.com') ||
+        plainText.includes('plus.unsplash.com')
+      ) {
+        // Make sure it's a single URL and not a sentence!
+        if (!plainText.includes(' ') && !plainText.includes('\n')) {
+          urlToUse = plainText;
+        }
+      }
+    }
+
+    if (urlToUse) {
+      e.preventDefault();
+      e.stopPropagation();
+      setPendingImgUrl(urlToUse);
+      setShowAlignModal(true);
+    }
+  }, []);
+
+  // Use capture phase to intercept the event before standard MDXEditor logic
+  useEffect(() => {
+    const el = editorContainerRef.current;
+    if (!el) return;
+    el.addEventListener('paste', handleEditorPaste, true);
+    return () => el.removeEventListener('paste', handleEditorPaste, true);
+  }, [handleEditorPaste]);
 
   // Upload media and insert it into the editor.
   const handleImageFile = async (file: File) => {
@@ -1127,7 +1193,7 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
           </div>
         )}
         {/* Editor */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto" ref={editorContainerRef}>
           <MDXEditor
             ref={editorRef}
             markdown={seedMarkdown}

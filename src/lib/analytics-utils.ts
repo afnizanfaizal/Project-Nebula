@@ -50,6 +50,15 @@ const COUNTRY_INFO: Record<string, { name: string; flag: string }> = {
   IT: { name: 'Italy',          flag: '🇮🇹' },
   ES: { name: 'Spain',          flag: '🇪🇸' },
   PL: { name: 'Poland',         flag: '🇵🇱' },
+  CH: { name: 'Switzerland',    flag: '🇨🇭' },
+  TR: { name: 'Turkey',         flag: '🇹🇷' },
+  BE: { name: 'Belgium',        flag: '🇧🇪' },
+  AT: { name: 'Austria',        flag: '🇦🇹' },
+  IE: { name: 'Ireland',        flag: '🇮🇪' },
+  MX: { name: 'Mexico',         flag: '🇲🇽' },
+  AR: { name: 'Argentina',      flag: '🇦🇷' },
+  HK: { name: 'Hong Kong',      flag: '🇭🇰' },
+  TW: { name: 'Taiwan',         flag: '🇹🇼' },
 };
 
 /**
@@ -100,11 +109,13 @@ export function aggregateTopCountries(
     }
   }
   return Object.entries(totals)
+    // Filter out mock/test data if it exists in DB
+    .filter(([code]) => code !== 'MOCK' && code !== 'test')
     .sort(([, a], [, b]) => b - a)
     .slice(0, limit)
     .map(([code, views]) => ({
       code,
-      name: COUNTRY_INFO[code]?.name ?? code,
+      name: COUNTRY_INFO[code]?.name ?? (code === 'XX' ? 'Unknown' : code),
       flag: COUNTRY_INFO[code]?.flag ?? '🌐',
       views,
     }));

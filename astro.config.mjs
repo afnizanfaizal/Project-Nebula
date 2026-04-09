@@ -87,7 +87,14 @@ export default defineConfig({
       // @firebase/* sub-package rather than externalize them, otherwise the
       // EnvironmentPluginContainer transform chain crashes on SSR pages that
       // transitively import firebase.ts.
-      noExternal: [/^@firebase\//, /^firebase(?!-admin)/],
+      noExternal: [
+        /^@firebase\//,
+        /^firebase(?!-admin)/,
+        /^@mdxeditor\//,
+        /^@lexical\//,
+        /^@codemirror\//,
+        'codemirror',
+      ],
     },
   },
   markdown: {

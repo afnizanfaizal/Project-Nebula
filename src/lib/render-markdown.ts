@@ -1,6 +1,7 @@
 // src/lib/render-markdown.ts
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
+import remarkGfm from 'remark-gfm';
 import remarkRehype from 'remark-rehype';
 import rehypeRaw from 'rehype-raw';
 import rehypeShiki from '@shikijs/rehype';
@@ -26,6 +27,7 @@ export async function renderMarkdown(
 
   const file = await unified()
     .use(remarkParse)
+    .use(remarkGfm)
     // Collect headings from the MDAST before converting to hast
     .use(() => (tree) => {
       visit(tree, 'heading', (node: any) => {

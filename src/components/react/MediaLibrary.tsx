@@ -56,6 +56,7 @@ interface MediaLibraryProps {
 }
 
 export default function MediaLibrary({ onSelect, variant = 'manage' }: MediaLibraryProps) {
+  const [activeTab, setActiveTab] = useState<'library' | 'stock'>('library');
   const [images, setImages] = useState<ImageMetadata[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -238,6 +239,28 @@ export default function MediaLibrary({ onSelect, variant = 'manage' }: MediaLibr
             {variant === 'picker' ? 'Select an item for your post' : 'Manage your uploaded media'}
           </p>
         </div>
+        <div className="flex items-center bg-zinc-900 border border-zinc-800 rounded-lg p-1">
+          <button
+            onClick={() => setActiveTab('library')}
+            className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${
+              activeTab === 'library'
+                ? 'bg-zinc-800 text-blue-400 shadow-sm'
+                : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            My Library
+          </button>
+          <button
+            onClick={() => setActiveTab('stock')}
+            className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all ${
+              activeTab === 'stock'
+                ? 'bg-zinc-800 text-blue-400 shadow-sm'
+                : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            Stock Photos
+          </button>
+        </div>
         <div className="flex items-center gap-2">
           {variant === 'manage' && images.length > 0 && (
             <button
@@ -268,282 +291,288 @@ export default function MediaLibrary({ onSelect, variant = 'manage' }: MediaLibr
         </div>
       </div>
 
-      {/* Discovery Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between pb-2">
-        <div className="relative w-full sm:w-64 group">
-          <Icon.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 group-focus-within:text-blue-400 transition-colors" />
-          <input
-            type="text"
-            placeholder="Search filenames..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-4 py-2 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
-            >
-              ✕
-            </button>
-          )}
-        </div>
+      {activeTab === 'library' ? (
+        <>
+          {/* Discovery Toolbar */}
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between pb-2">
+            <div className="relative w-full sm:w-64 group">
+              <Icon.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 group-focus-within:text-blue-400 transition-colors" />
+              <input
+                type="text"
+                placeholder="Search filenames..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-4 py-2 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-          <div className="flex bg-zinc-900 border border-zinc-800 rounded-xl p-1 shrink-0">
-            {(['all', 'image', 'pdf'] as const).map((t) => (
+            <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+              <div className="flex bg-zinc-900 border border-zinc-800 rounded-xl p-1 shrink-0">
+                {(['all', 'image', 'pdf'] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setFilterType(t)}
+                    className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+                      filterType === t 
+                        ? 'bg-zinc-800 text-blue-400 shadow-sm' 
+                        : 'text-zinc-500 hover:text-zinc-300'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+
+              <div className="h-4 w-px bg-zinc-800 mx-1 shrink-0" />
+
               <button
-                key={t}
-                onClick={() => setFilterType(t)}
-                className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
-                  filterType === t 
-                    ? 'bg-zinc-800 text-blue-400 shadow-sm' 
-                    : 'text-zinc-500 hover:text-zinc-300'
-                }`}
+                onClick={() => setSortBy(s => s === 'date' ? 'name' : 'date')}
+                className="flex items-center gap-2 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-[10px] font-bold text-zinc-400 hover:text-zinc-200 transition-colors shrink-0"
               >
-                {t}
+                <Icon.Sort className="w-3 h-3" />
+                SORT BY: {sortBy.toUpperCase()}
               </button>
-            ))}
+            </div>
           </div>
 
-          <div className="h-4 w-px bg-zinc-800 mx-1 shrink-0" />
-
-          <button
-            onClick={() => setSortBy(s => s === 'date' ? 'name' : 'date')}
-            className="flex items-center gap-2 px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-[10px] font-bold text-zinc-400 hover:text-zinc-200 transition-colors shrink-0"
-          >
-            <Icon.Sort className="w-3 h-3" />
-            SORT BY: {sortBy.toUpperCase()}
-          </button>
-        </div>
-      </div>
-
-      {/* Bulk actions toolbar */}
-      {isSelectionMode && (
-        <div className="flex items-center justify-between px-4 py-3 bg-blue-600/10 border border-blue-500/20 rounded-xl animate-in slide-in-from-top-2 duration-200">
-          <div className="flex items-center gap-4">
-            <span className="text-xs font-semibold text-blue-400">
-              {selectedNames.size} items selected
-            </span>
-            <button
-              onClick={handleSelectAll}
-              className="text-xs font-medium text-zinc-300 hover:text-white transition-colors"
-            >
-              {selectedNames.size === images.length ? 'Deselect All' : 'Select All'}
-            </button>
-          </div>
-          <button
-            disabled={selectedNames.size === 0}
-            onClick={() => setShowBulkDeleteModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Icon.Trash className="w-3.5 h-3.5" />
-            Delete Selected
-          </button>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {[...Array(10)].map((_, i) => (
-            <div key={i} className="aspect-square bg-zinc-900 border border-zinc-800 rounded-xl animate-pulse" />
-          ))}
-        </div>
-      ) : filteredImages.length === 0 ? (
-        <div className="py-20 text-center bg-zinc-900 border border-zinc-800 rounded-xl">
-          <Icon.Search className="w-12 h-12 text-zinc-800 mx-auto mb-4" />
-          <p className="text-sm text-zinc-500">
-            {images.length === 0 ? 'No images uploaded yet.' : 'No media matches your search filters.'}
-          </p>
-          {images.length > 0 && (
-            <button
-              onClick={() => { setSearch(''); setFilterType('all'); }}
-              className="mt-4 text-xs font-medium text-blue-400 hover:text-blue-300 underline underline-offset-4"
-            >
-              Clear all filters
-            </button>
+          {/* Bulk actions toolbar */}
+          {isSelectionMode && (
+            <div className="flex items-center justify-between px-4 py-3 bg-blue-600/10 border border-blue-500/20 rounded-xl animate-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-semibold text-blue-400">
+                  {selectedNames.size} items selected
+                </span>
+                <button
+                  onClick={handleSelectAll}
+                  className="text-xs font-medium text-zinc-300 hover:text-white transition-colors"
+                >
+                  {selectedNames.size === images.length ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
+              <button
+                disabled={selectedNames.size === 0}
+                onClick={() => setShowBulkDeleteModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Icon.Trash className="w-3.5 h-3.5" />
+                Delete Selected
+              </button>
+            </div>
           )}
-        </div>
+
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {[...Array(10)].map((_, i) => (
+                <div key={i} className="aspect-square bg-zinc-900 border border-zinc-800 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : filteredImages.length === 0 ? (
+            <div className="py-20 text-center bg-zinc-900 border border-zinc-800 rounded-xl">
+              <Icon.Search className="w-12 h-12 text-zinc-800 mx-auto mb-4" />
+              <p className="text-sm text-zinc-500">
+                {images.length === 0 ? 'No images uploaded yet.' : 'No media matches your search filters.'}
+              </p>
+              {images.length > 0 && (
+                <button
+                  onClick={() => { setSearch(''); setFilterType('all'); }}
+                  className="mt-4 text-xs font-medium text-blue-400 hover:text-blue-300 underline underline-offset-4"
+                >
+                  Clear all filters
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-12">
+              {displayImages.length > 0 && (
+                <section>
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+                      <Icon.Photo className="w-4 h-4 text-zinc-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-100">Images</h3>
+                      <p className="text-[10px] text-zinc-500 mt-0.5">{displayImages.length} items</p>
+                    </div>
+                    <div className="h-px flex-1 bg-zinc-800/50 ml-2" />
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {displayImages.map((image) => (
+                      <div
+                        key={image.name}
+                        onClick={() => {
+                          if (isSelectionMode) {
+                            toggleSelection(image.name);
+                          } else if (onSelect) {
+                            onSelect(image);
+                          }
+                        }}
+                        className={`group relative aspect-square bg-zinc-900 border rounded-xl overflow-hidden transition-all ${
+                          isSelectionMode 
+                            ? selectedNames.has(image.name) 
+                              ? 'border-blue-500 ring-2 ring-blue-500/20' 
+                              : 'border-zinc-800 hover:border-zinc-600'
+                            : 'border-zinc-800 hover:border-zinc-700'
+                        } ${
+                          (onSelect || isSelectionMode) ? 'cursor-pointer active:scale-[0.98]' : ''
+                        }`}
+                      >
+                        <img
+                          src={image.url}
+                          alt={image.name}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                        
+                        {isSelectionMode && (
+                          <div className={`absolute top-2 left-2 w-5 h-5 rounded-md border flex items-center justify-center transition-colors z-10 ${
+                            selectedNames.has(image.name) 
+                              ? 'bg-blue-600 border-blue-500' 
+                              : 'bg-zinc-900/60 border-zinc-500'
+                          }`}>
+                            {selectedNames.has(image.name) && <Icon.Check className="w-3.5 h-3.5 text-white" />}
+                          </div>
+                        )}
+
+                        <div className={`absolute inset-0 bg-zinc-950/60 transition-opacity flex flex-col justify-between p-2 ${
+                          isSelectionMode ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'
+                        }`}>
+                          <div className="flex justify-end gap-1.5">
+                            {variant === 'manage' && (
+                              <>
+                                <button
+                                  onClick={(e) => handleCopy(e, image.url, image.name)}
+                                  className="p-1.5 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white transition-colors"
+                                  title="Copy URL"
+                                >
+                                  {copiedName === image.name ? <Icon.Check className="w-3.5 h-3.5" /> : <Icon.Clipboard className="w-3.5 h-3.5" />}
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setDeleteTarget(image); }}
+                                  className="p-1.5 rounded-lg bg-zinc-800 text-red-400 hover:bg-red-950/50 transition-colors"
+                                  title="Delete"
+                                >
+                                  <Icon.Trash className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
+                            {variant === 'picker' && (
+                              <div className="px-2 py-1 rounded-md bg-blue-600 text-white text-[10px] font-bold">
+                                SELECT
+                              </div>
+                            )}
+                          </div>
+                          <div className="bg-zinc-900/80 backdrop-blur-sm rounded-lg p-2">
+                            <p className="text-[10px] text-zinc-100 truncate font-mono">{image.name}</p>
+                            <p className="text-[9px] text-zinc-500 mt-0.5">{formatSize(image.size)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {displayFiles.length > 0 && (
+                <section>
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+                      <Icon.Document className="w-4 h-4 text-zinc-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-100">Files</h3>
+                      <p className="text-[10px] text-zinc-500 mt-0.5">{displayFiles.length} items</p>
+                    </div>
+                    <div className="h-px flex-1 bg-zinc-800/50 ml-2" />
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+                    {displayFiles.map((image) => (
+                      <div
+                        key={image.name}
+                        onClick={() => {
+                          if (isSelectionMode) {
+                            toggleSelection(image.name);
+                          } else if (onSelect) {
+                            onSelect(image);
+                          }
+                        }}
+                        className={`group relative aspect-square bg-zinc-900 border rounded-xl overflow-hidden transition-all ${
+                          isSelectionMode 
+                            ? selectedNames.has(image.name) 
+                              ? 'border-blue-500 ring-2 ring-blue-500/20' 
+                              : 'border-zinc-800 hover:border-zinc-600'
+                            : 'border-zinc-800 hover:border-zinc-700'
+                        } ${
+                          (onSelect || isSelectionMode) ? 'cursor-pointer active:scale-[0.98]' : ''
+                        }`}
+                      >
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 gap-3 border-b border-zinc-800 pb-2">
+                          <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                            <Icon.Document className="w-6 h-6 text-red-500" />
+                          </div>
+                          <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest">PDF</span>
+                        </div>
+                        
+                        {isSelectionMode && (
+                          <div className={`absolute top-2 left-2 w-5 h-5 rounded-md border flex items-center justify-center transition-colors z-10 ${
+                            selectedNames.has(image.name) 
+                              ? 'bg-blue-600 border-blue-500' 
+                              : 'bg-zinc-900/60 border-zinc-500'
+                          }`}>
+                            {selectedNames.has(image.name) && <Icon.Check className="w-3.5 h-3.5 text-white" />}
+                          </div>
+                        )}
+
+                        <div className={`absolute inset-0 bg-zinc-950/60 transition-opacity flex flex-col justify-between p-2 ${
+                          isSelectionMode ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'
+                        }`}>
+                          <div className="flex justify-end gap-1.5">
+                            {variant === 'manage' && (
+                              <>
+                                <button
+                                  onClick={(e) => handleCopy(e, image.url, image.name)}
+                                  className="p-1.5 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white transition-colors"
+                                  title="Copy URL"
+                                >
+                                  {copiedName === image.name ? <Icon.Check className="w-3.5 h-3.5" /> : <Icon.Clipboard className="w-3.5 h-3.5" />}
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setDeleteTarget(image); }}
+                                  className="p-1.5 rounded-lg bg-zinc-800 text-red-400 hover:bg-red-950/50 transition-colors"
+                                  title="Delete"
+                                >
+                                  <Icon.Trash className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
+                            {variant === 'picker' && (
+                              <div className="px-2 py-1 rounded-md bg-blue-600 text-white text-[10px] font-bold">
+                                SELECT
+                              </div>
+                            )}
+                          </div>
+                          <div className="bg-zinc-900/80 backdrop-blur-sm rounded-lg p-2">
+                            <p className="text-[10px] text-zinc-100 truncate font-mono">{image.name}</p>
+                            <p className="text-[9px] text-zinc-500 mt-0.5">{formatSize(image.size)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </div>
+          )}
+        </>
       ) : (
-        <div className="space-y-12">
-          {displayImages.length > 0 && (
-            <section>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center">
-                  <Icon.Photo className="w-4 h-4 text-zinc-400" />
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-100">Images</h3>
-                  <p className="text-[10px] text-zinc-500 mt-0.5">{displayImages.length} items</p>
-                </div>
-                <div className="h-px flex-1 bg-zinc-800/50 ml-2" />
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {displayImages.map((image) => (
-                  <div
-                    key={image.name}
-                    onClick={() => {
-                      if (isSelectionMode) {
-                        toggleSelection(image.name);
-                      } else if (onSelect) {
-                        onSelect(image);
-                      }
-                    }}
-                    className={`group relative aspect-square bg-zinc-900 border rounded-xl overflow-hidden transition-all ${
-                      isSelectionMode 
-                        ? selectedNames.has(image.name) 
-                          ? 'border-blue-500 ring-2 ring-blue-500/20' 
-                          : 'border-zinc-800 hover:border-zinc-600'
-                        : 'border-zinc-800 hover:border-zinc-700'
-                    } ${
-                      (onSelect || isSelectionMode) ? 'cursor-pointer active:scale-[0.98]' : ''
-                    }`}
-                  >
-                    <img
-                      src={image.url}
-                      alt={image.name}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
-                    
-                    {isSelectionMode && (
-                      <div className={`absolute top-2 left-2 w-5 h-5 rounded-md border flex items-center justify-center transition-colors z-10 ${
-                        selectedNames.has(image.name) 
-                          ? 'bg-blue-600 border-blue-500' 
-                          : 'bg-zinc-900/60 border-zinc-500'
-                      }`}>
-                        {selectedNames.has(image.name) && <Icon.Check className="w-3.5 h-3.5 text-white" />}
-                      </div>
-                    )}
-
-                    <div className={`absolute inset-0 bg-zinc-950/60 transition-opacity flex flex-col justify-between p-2 ${
-                      isSelectionMode ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'
-                    }`}>
-                      <div className="flex justify-end gap-1.5">
-                        {variant === 'manage' && (
-                          <>
-                            <button
-                              onClick={(e) => handleCopy(e, image.url, image.name)}
-                              className="p-1.5 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white transition-colors"
-                              title="Copy URL"
-                            >
-                              {copiedName === image.name ? <Icon.Check className="w-3.5 h-3.5" /> : <Icon.Clipboard className="w-3.5 h-3.5" />}
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setDeleteTarget(image); }}
-                              className="p-1.5 rounded-lg bg-zinc-800 text-red-400 hover:bg-red-950/50 transition-colors"
-                              title="Delete"
-                            >
-                              <Icon.Trash className="w-3.5 h-3.5" />
-                            </button>
-                          </>
-                        )}
-                        {variant === 'picker' && (
-                          <div className="px-2 py-1 rounded-md bg-blue-600 text-white text-[10px] font-bold">
-                            SELECT
-                          </div>
-                        )}
-                      </div>
-                      <div className="bg-zinc-900/80 backdrop-blur-sm rounded-lg p-2">
-                        <p className="text-[10px] text-zinc-100 truncate font-mono">{image.name}</p>
-                        <p className="text-[9px] text-zinc-500 mt-0.5">{formatSize(image.size)}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {displayFiles.length > 0 && (
-            <section>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center">
-                  <Icon.Document className="w-4 h-4 text-zinc-400" />
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-100">Files</h3>
-                  <p className="text-[10px] text-zinc-500 mt-0.5">{displayFiles.length} items</p>
-                </div>
-                <div className="h-px flex-1 bg-zinc-800/50 ml-2" />
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
-                {displayFiles.map((image) => (
-                  <div
-                    key={image.name}
-                    onClick={() => {
-                      if (isSelectionMode) {
-                        toggleSelection(image.name);
-                      } else if (onSelect) {
-                        onSelect(image);
-                      }
-                    }}
-                    className={`group relative aspect-square bg-zinc-900 border rounded-xl overflow-hidden transition-all ${
-                      isSelectionMode 
-                        ? selectedNames.has(image.name) 
-                          ? 'border-blue-500 ring-2 ring-blue-500/20' 
-                          : 'border-zinc-800 hover:border-zinc-600'
-                        : 'border-zinc-800 hover:border-zinc-700'
-                    } ${
-                      (onSelect || isSelectionMode) ? 'cursor-pointer active:scale-[0.98]' : ''
-                    }`}
-                  >
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-900 gap-3 border-b border-zinc-800 pb-2">
-                      <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-                        <Icon.Document className="w-6 h-6 text-red-500" />
-                      </div>
-                      <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest">PDF</span>
-                    </div>
-                    
-                    {isSelectionMode && (
-                      <div className={`absolute top-2 left-2 w-5 h-5 rounded-md border flex items-center justify-center transition-colors z-10 ${
-                        selectedNames.has(image.name) 
-                          ? 'bg-blue-600 border-blue-500' 
-                          : 'bg-zinc-900/60 border-zinc-500'
-                      }`}>
-                        {selectedNames.has(image.name) && <Icon.Check className="w-3.5 h-3.5 text-white" />}
-                      </div>
-                    )}
-
-                    <div className={`absolute inset-0 bg-zinc-950/60 transition-opacity flex flex-col justify-between p-2 ${
-                      isSelectionMode ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'
-                    }`}>
-                      <div className="flex justify-end gap-1.5">
-                        {variant === 'manage' && (
-                          <>
-                            <button
-                              onClick={(e) => handleCopy(e, image.url, image.name)}
-                              className="p-1.5 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white transition-colors"
-                              title="Copy URL"
-                            >
-                              {copiedName === image.name ? <Icon.Check className="w-3.5 h-3.5" /> : <Icon.Clipboard className="w-3.5 h-3.5" />}
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setDeleteTarget(image); }}
-                              className="p-1.5 rounded-lg bg-zinc-800 text-red-400 hover:bg-red-950/50 transition-colors"
-                              title="Delete"
-                            >
-                              <Icon.Trash className="w-3.5 h-3.5" />
-                            </button>
-                          </>
-                        )}
-                        {variant === 'picker' && (
-                          <div className="px-2 py-1 rounded-md bg-blue-600 text-white text-[10px] font-bold">
-                            SELECT
-                          </div>
-                        )}
-                      </div>
-                      <div className="bg-zinc-900/80 backdrop-blur-sm rounded-lg p-2">
-                        <p className="text-[10px] text-zinc-100 truncate font-mono">{image.name}</p>
-                        <p className="text-[9px] text-zinc-500 mt-0.5">{formatSize(image.size)}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
+        <StockPhotoTab onSelect={onSelect} />
       )}
 
       {/* Bulk Delete confirmation modal */}
@@ -626,6 +655,126 @@ export default function MediaLibrary({ onSelect, variant = 'manage' }: MediaLibr
           {toast}
         </div>
       )}
+    </div>
+  );
+}
+
+function StockPhotoTab({ onSelect }: { onSelect?: (img: ImageMetadata) => void }) {
+  const [url, setUrl] = useState('');
+  const [preview, setPreview] = useState<string | null>(null);
+  const [error, setError] = useState('');
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const text = e.clipboardData.getData('text');
+    if (text.startsWith('http')) {
+      validateUrl(text);
+    }
+  };
+
+  const validateUrl = (input: string) => {
+    setError('');
+    const trimmed = input.trim();
+    if (!trimmed) return;
+
+    if (
+      trimmed.includes('pexels.com') ||
+      trimmed.includes('unsplash.com') ||
+      /\.(jpg|jpeg|png|gif|webp|svg)/i.test(trimmed)
+    ) {
+      setPreview(trimmed);
+      setUrl(trimmed);
+    } else {
+      setError('Please provide a valid image URL from Pexels, Unsplash, or a direct image link.');
+      setPreview(null);
+    }
+  };
+
+  return (
+    <div className="p-8 bg-zinc-900/50 border border-zinc-800 rounded-2xl animate-in fade-in duration-300">
+      <div className="max-w-xl mx-auto text-center space-y-6">
+        <div className="inline-flex p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 mb-2">
+          <Icon.Photo className="w-6 h-6 text-blue-400" />
+        </div>
+        
+        <div>
+          <h3 className="text-lg font-bold text-white">Add External Stock Photo</h3>
+          <p className="text-xs text-zinc-500 mt-2 leading-relaxed">
+            Link images directly from Pexels or Unsplash without using your storage quota. 
+            Simply find an image, copy its URL, and paste it below.
+          </p>
+        </div>
+
+        <div className="flex gap-3 justify-center">
+          <a
+            href="https://www.pexels.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 rounded-xl bg-zinc-800 border border-zinc-700 text-[10px] font-bold text-zinc-300 hover:bg-zinc-700 hover:text-white transition-all flex items-center gap-2"
+          >
+            Browse Pexels
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
+            </svg>
+          </a>
+          <a
+            href="https://unsplash.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 rounded-xl bg-zinc-800 border border-zinc-700 text-[10px] font-bold text-zinc-300 hover:bg-zinc-700 hover:text-white transition-all flex items-center gap-2"
+          >
+            Browse Unsplash
+            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" />
+            </svg>
+          </a>
+        </div>
+
+        <div className="relative group">
+          <input
+            type="text"
+            placeholder="Paste Pexels or Unsplash image URL here..."
+            value={url}
+            onChange={(e) => validateUrl(e.target.value)}
+            onPaste={handlePaste}
+            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
+          />
+          {url && (
+            <button
+              onClick={() => { setUrl(''); setPreview(null); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
+        {error && <p className="text-[10px] font-medium text-red-400">{error}</p>}
+
+        {preview && (
+          <div className="pt-4 space-y-4 animate-in slide-in-from-bottom-4 duration-500">
+            <div className="relative aspect-video rounded-xl border border-zinc-800 overflow-hidden bg-zinc-950 group/preview">
+              <img
+                src={preview}
+                alt="Stock Preview"
+                className="w-full h-full object-contain"
+                onError={() => setError('Could not load image preview. Please check the URL.')}
+              />
+              <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-md p-2 text-[10px] text-zinc-400 truncate">
+                {preview}
+              </div>
+            </div>
+            
+            {onSelect && (
+              <button
+                onClick={() => onSelect({ name: 'Stock Photo', url: preview, size: 0, mtime: Date.now() })}
+                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-lg shadow-blue-500/20"
+              >
+                Insert this photo into post
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
