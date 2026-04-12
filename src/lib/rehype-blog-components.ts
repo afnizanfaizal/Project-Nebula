@@ -1,12 +1,14 @@
 // src/lib/rehype-blog-components.ts
 import { visit } from 'unist-util-visit';
 
-// Matches Callout.astro config exactly
-const CALLOUT_CONFIG: Record<string, { icon: string; bg: string; border: string; text: string }> = {
-  info:    { icon: 'ℹ', bg: 'bg-blue-50/50 dark:bg-blue-950/30',   border: 'border-blue-200 dark:border-blue-800/50',   text: 'text-blue-900 dark:text-blue-100'   },
-  tip:     { icon: '✦', bg: 'bg-green-50/50 dark:bg-green-950/30', border: 'border-green-200 dark:border-green-800/50', text: 'text-green-900 dark:text-green-100' },
-  warning: { icon: '⚠', bg: 'bg-amber-50/50 dark:bg-amber-950/30', border: 'border-amber-200 dark:border-amber-800/50', text: 'text-amber-900 dark:text-amber-100' },
-  danger:  { icon: '✕', bg: 'bg-red-50/50 dark:bg-red-950/30',     border: 'border-red-200 dark:border-red-800/50',     text: 'text-red-900 dark:text-red-100'   },
+// Matches the MDXEditor direct rendering look in the editor
+const CALLOUT_CONFIG: Record<string, { label: string; border: string; text: string }> = {
+  note:    { label: 'NOTE',    border: 'border-[#71717a]', text: 'text-[#a1a1aa]' },
+  info:    { label: 'INFO',    border: 'border-[#3b82f6]', text: 'text-[#60a5fa]' },
+  tip:     { label: 'TIP',     border: 'border-[#10b981]', text: 'text-[#34d399]' },
+  warning: { label: 'WARNING', border: 'border-[#f59e0b]', text: 'text-[#fbbf24]' },
+  caution: { label: 'CAUTION', border: 'border-[#f97316]', text: 'text-[#fb923c]' },
+  danger:  { label: 'DANGER',  border: 'border-[#ef4444]', text: 'text-[#f87171]' },
 };
 
 // Lightweight hast node constructors (avoids hastscript dependency)
@@ -30,24 +32,15 @@ export function rehypeBlogComponents() {
       if (node.tagName === 'callout') {
         const type: string = String(node.properties?.type ?? 'info');
         const cfg = CALLOUT_CONFIG[type] ?? CALLOUT_CONFIG.info;
-        const title: string | undefined = node.properties?.title
-          ? String(node.properties.title)
-          : undefined;
 
         parent.children[index] = el(
           'div',
-          { className: `not-prose my-6 flex gap-3 rounded-lg border p-4 backdrop-blur-sm ${cfg.bg} ${cfg.border}` },
-          el('span', { className: `mt-0.5 shrink-0 text-base leading-none ${cfg.text}`, ariaHidden: 'true' },
-            txt(cfg.icon),
+          { className: `not-prose my-6 p-5 rounded-r-lg bg-[#0d1117] text-[#e6edf3] border-l-4 ${cfg.border}` },
+          el('span', { className: `inline-block text-[0.7rem] font-extrabold uppercase mb-3 px-2 py-[2px] rounded bg-[#161b22] tracking-[0.05em] border border-[#30363d] ${cfg.text}`, ariaHidden: 'true' },
+            txt(cfg.label),
           ),
-          el('div', { className: 'flex-1 min-w-0' },
-            ...(title
-              ? [el('p', { className: `mb-1 text-sm font-semibold ${cfg.text}` }, txt(title))]
-              : []
-            ),
-            el('div', { className: `text-sm leading-relaxed ${cfg.text} [&>p]:m-0` },
-              ...node.children,
-            ),
+          el('div', { className: 'text-[0.9em] leading-relaxed [&>p]:m-0' },
+            ...node.children,
           ),
         );
         return;

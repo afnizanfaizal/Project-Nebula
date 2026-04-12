@@ -23,6 +23,16 @@ import {
   type JsxEditorProps,
   tablePlugin,
   InsertTable,
+  AdmonitionDirectiveDescriptor,
+  thematicBreakPlugin,
+  directivesPlugin,
+  Separator,
+  CodeToggle,
+  HighlightToggle,
+  StrikeThroughSupSubToggles,
+  ListsToggle,
+  InsertThematicBreak,
+  InsertAdmonition,
 } from '@mdxeditor/editor';
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import MediaLibrary, { type ImageMetadata } from './MediaLibrary';
@@ -401,14 +411,28 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
       jsxComponentDescriptors: [youtubeDescriptor, statsGridDescriptor, statDescriptor]
     }),
     tablePlugin(),
+    thematicBreakPlugin(),
+    directivesPlugin({
+      directiveDescriptors: [AdmonitionDirectiveDescriptor]
+    }),
     toolbarPlugin({
       toolbarContents: () => (
         <>
           <UndoRedo />
+          <Separator />
           <BoldItalicUnderlineToggles />
+          <CodeToggle />
+          <HighlightToggle />
+          <StrikeThroughSupSubToggles />
+          <Separator />
+          <ListsToggle options={['bullet', 'number', 'check']} />
+          <Separator />
           <BlockTypeSelect />
+          <Separator />
           <InsertCodeBlock />
           <InsertTable />
+          <InsertThematicBreak />
+          <InsertAdmonition />
         </>
       ),
     }),

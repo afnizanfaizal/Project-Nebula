@@ -25,6 +25,11 @@ export async function renderMarkdown(
 ): Promise<{ html: string; headings: Heading[] }> {
   const headings: Heading[] = [];
 
+  // Pre-process :::tip style admonitions into <callout> tags for consistent rendering
+  const preprocessed = content.replace(/:::(note|tip|info|warning|caution|danger)([\s\S]*?):::/g, (match, type, inner) => {
+    return `\n<callout type="${type}">\n${inner.trim()}\n</callout>\n`;
+  });
+
   const file = await unified()
     .use(remarkParse)
     .use(remarkGfm)
@@ -42,10 +47,10 @@ export async function renderMarkdown(
     .use(rehypeRaw)
     .use(rehypeBlogComponents)
     .use(rehypeShiki, {
-      themes: { light: 'github-light', dark: 'github-dark-default' },
+      theme: 'github-dark-default',
     })
     .use(rehypeStringify)
-    .process(content);
+    .process(preprocessed);
 
   return { html: String(file), headings };
 }

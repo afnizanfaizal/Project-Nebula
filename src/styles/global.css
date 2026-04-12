@@ -61,6 +61,10 @@
 [class*="_editorWrapper_"] {
   background-color: #09090b !important;
   color: #e4e4e7 !important;
+  --baseBg: transparent !important;
+  --basePageBg: transparent !important;
+  --baseBase: #18181b !important;
+  --baseText: #e4e4e7 !important;
 }
 
 /* Toolbar */
@@ -127,9 +131,43 @@
 
 /* Code blocks */
 [class*="_codeBlock_"],
-[class*="_codeMirrorWrapper_"] {
+[class*="_codeMirrorWrapper_"],
+.cm-editor,
+.cm-gutters,
+.cm-content {
   background-color: #18181b !important;
   border-color: #3f3f46 !important;
+  color: #e4e4e7 !important;
+}
+
+.cm-gutters {
+  border-right: 1px solid #3f3f46 !important;
+  color: #71717a !important;
+}
+
+.cm-activeLine,
+.cm-activeLineGutter {
+  background-color: #27272a !important;
+}
+
+/* CodeMirror Autocomplete / Tooltips */
+.cm-tooltip {
+  background-color: #18181b !important;
+  border: 1px solid #3f3f46 !important;
+  color: #e4e4e7 !important;
+}
+
+.cm-tooltip-autocomplete > ul > li {
+  color: #a1a1aa !important;
+}
+
+.cm-tooltip-autocomplete > ul > li[aria-selected] {
+  background-color: #3f3f46 !important;
+  color: #ffffff !important;
+}
+
+.cm-completionDetail {
+  color: #71717a !important;
 }
 
 /* Frontmatter editor */
@@ -149,6 +187,79 @@
 [class*="_toolbarRoot_"] [class*="_separator_"] {
   background-color: #3f3f46 !important;
 }
+
+/* ── MDXEditor Admonitions in Editor ──────────────────────────────────────── */
+
+/* Completely nuke any existing backgrounds on all possible admonition/directive containers */
+[class*="_editorRoot_"] [class*="_admonition_"],
+[class*="_editorRoot_"] [class*="_directive_"],
+[class*="_editorRoot_"] [class*="_containerDirective_"],
+[class*="_editorRoot_"] [data-directive-name] {
+  background: #0d1117 !important;
+  background-color: #0d1117 !important;
+  color: #e6edf3 !important;
+  border-radius: 0 8px 8px 0 !important;
+  padding: 1.25rem !important;
+  margin: 1.5rem 0 !important;
+}
+
+/* Force dark text and transparent backgrounds on ALL nested elements inside the admonition */
+[class*="_editorRoot_"] [class*="_admonition_"] *,
+[class*="_editorRoot_"] [class*="_directive_"] *,
+[class*="_editorRoot_"] [data-directive-name] *,
+[class*="_editorRoot_"] [class*="_nestedEditor_"],
+[class*="_editorRoot_"] [class*="_nestedEditor_"] * {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #e6edf3 !important;
+}
+
+/* Reset CSS variables being used by MDXEditor to force light colours on admonitions */
+[class*="_editorRoot_"],
+[class*="_admonition_"],
+[class*="_directive_"] {
+  --admonitionBg: transparent !important;
+  --admonitionTipBg: transparent !important;
+  --admonitionInfoBg: transparent !important;
+  --admonitionCautionBg: transparent !important;
+  --admonitionDangerBg: transparent !important;
+  --admonitionNoteBg: transparent !important;
+  --baseBg: transparent !important;
+  --basePageBg: transparent !important;
+}
+
+[class*="_editorRoot_"] [data-directive-name]::before {
+  content: attr(data-directive-name) !important;
+  display: inline-block !important;
+  font-size: 0.7rem !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  margin-bottom: 0.75rem !important;
+  padding: 2px 8px !important;
+  border-radius: 4px !important;
+  background-color: #161b22 !important;
+  letter-spacing: 0.05em !important;
+  border: 1px solid #30363d !important;
+}
+
+/* Type-specific accents in editor */
+[data-directive-name="note"], [class*="_admonitionNote_"] { border-left: 4px solid #71717a !important; }
+[data-directive-name="note"]::before, [class*="_admonitionNote_"]::before { content: "NOTE" !important; color: #a1a1aa !important; }
+
+[data-directive-name="tip"], [class*="_admonitionTip_"] { border-left: 4px solid #10b981 !important; }
+[data-directive-name="tip"]::before, [class*="_admonitionTip_"]::before { content: "TIP" !important; color: #34d399 !important; }
+
+[data-directive-name="info"], [class*="_admonitionInfo_"] { border-left: 4px solid #3b82f6 !important; }
+[data-directive-name="info"]::before, [class*="_admonitionInfo_"]::before { content: "INFO" !important; color: #60a5fa !important; }
+
+[data-directive-name="warning"], [class*="_admonitionWarning_"] { border-left: 4px solid #f59e0b !important; }
+[data-directive-name="warning"]::before, [class*="_admonitionWarning_"]::before { content: "WARNING" !important; color: #fbbf24 !important; }
+
+[data-directive-name="caution"], [class*="_admonitionCaution_"] { border-left: 4px solid #f97316 !important; }
+[data-directive-name="caution"]::before, [class*="_admonitionCaution_"]::before { content: "CAUTION" !important; color: #fb923c !important; }
+
+[data-directive-name="danger"], [class*="_admonitionDanger_"] { border-left: 4px solid #ef4444 !important; }
+[data-directive-name="danger"]::before, [class*="_admonitionDanger_"]::before { content: "DANGER" !important; color: #f87171 !important; }
 
 /* ── MDXEditor dialogs / popups (e.g. InsertImage, link editor) ─────────── */
 [class*="_popupContainer_"],
@@ -283,6 +394,56 @@
   color: #ffffff !important;
 }
 
+/* ── MDXEditor Checklist Alignment Fix ────────────────────────────────────── */
+/* MDXEditor (Lexical) renders check lists using an absolutely positioned ::before pseudo-element on the list item for the box, and ::after for the tick. */
+[class*="_editorRoot_"] li[role="checkbox"]::before,
+[class*="_editorRoot_"] li[aria-checked="true"]::before,
+[class*="_editorRoot_"] li[aria-checked="false"]::before,
+[class*="_editorRoot_"] li[role="checkbox"]::after,
+[class*="_editorRoot_"] li[aria-checked="true"]::after,
+[class*="_editorRoot_"] li[aria-checked="false"]::after {
+  /* Use margin-top to nudge both the box and the checkmark down without overwriting the checkmark's rotation transform */
+  margin-top: 4px !important; 
+  transform: auto; /* Allow native transforms like rotation to continue working */
+}
+
+/* Fallback for any standard Markdown rendered <input> check lists in published posts */
+.prose li:has(> input[type="checkbox"]) {
+  list-style-type: none !important;
+  padding-left: 0 !important;
+}
+
+.prose li:has(> input[type="checkbox"])::before {
+  content: none !important;
+  display: none !important;
+}
+
+.prose li > input[type="checkbox"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  vertical-align: middle !important;
+  margin: 0 !important;
+  margin-right: 0.5rem !important;
+  position: relative !important;
+  transform: translateY(-0.1em) !important;
+  width: 1.2rem !important;
+  height: 1.2rem !important;
+  border: 1px solid #71717a !important; /* Zinc 500 edge */
+  border-radius: 4px !important;
+  background-color: transparent !important;
+  cursor: pointer;
+  outline: none;
+}
+
+.prose li > input[type="checkbox"]:checked {
+  background-color: #3b82f6 !important; /* Vibrant Blue */
+  border-color: #3b82f6 !important;
+  background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e") !important;
+  background-size: 100% 100% !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+}
+
 @layer utilities {
   .font-mono {
     font-feature-settings: 'liga' 0, 'calt' 0;
@@ -341,4 +502,22 @@
   color: #6b7280;
   text-align: center;
   font-style: italic;
+}
+
+/* Force dark background for all code blocks in the post content */
+.prose pre,
+.prose code:not(:where([class~="not-prose"] *)) {
+  background-color: #0d1117 !important; /* Matches github-dark-default */
+  color: #e6edf3 !important;
+}
+
+.prose pre {
+  border: 1px solid #30363d !important;
+  border-radius: 0.5rem !important;
+  padding: 1rem !important;
+}
+
+.prose code:not(pre code) {
+  padding: 0.2rem 0.4rem !important;
+  border-radius: 0.25rem !important;
 }

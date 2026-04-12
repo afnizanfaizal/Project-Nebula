@@ -50,21 +50,26 @@ const patchBrokenTransforms = {
   enforce: /** @type {'pre'} */ ('pre'),
   configResolved(config) {
     let total = sanitizePlugins(config.plugins);
+    
+    // Support Vite 7 environments
+    if (config.environments) {
+      for (const envName in config.environments) {
+        const env = config.environments[envName];
+        if (env.plugins) {
+          total += sanitizePlugins(env.plugins);
+        }
+      }
+    }
+
     if (config.worker && config.worker.plugins) {
       total += sanitizePlugins(config.worker.plugins);
     }
     if (total > 0) {
-      console.warn(`[patch-broken-transforms] Fixed ${total} broken hook(s) across plugins in configResolved`);
+      console.warn(`[patch-broken-transforms] Fixed ${total} broken hook(s) across plugins/environments in configResolved`);
     }
   },
-  // Re-run the sanitation just before the build/server starts, 
-  // as some integrations might inject plugins after configResolved.
-  buildStart() {
-    // Note: This only runs for the dev/build environment it's in.
-  },
-  configureServer() {
-    // This hook runs during dev, providing a point to re-verify if needed.
-  }
+  buildStart() {},
+  configureServer() {}
 };
 
 export default defineConfig({
@@ -101,10 +106,7 @@ export default defineConfig({
     syntaxHighlight: false,
     rehypePlugins: [
       [rehypeShiki, {
-        themes: {
-          light: 'github-light',
-          dark: 'github-dark-default',
-        },
+        theme: 'github-dark-default',
       }],
     ],
   },
