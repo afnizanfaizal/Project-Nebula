@@ -51,7 +51,7 @@ export default function FeaturedCarousel({ posts }: FeaturedCarouselProps) {
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      <div className="relative h-full w-full overflow-hidden rounded-2xl bg-zinc-950">
+      <div className="relative h-full w-full overflow-hidden rounded-2xl bg-[#050508]">
         {posts.map((post, index) => {
           const isActive = index === currentIndex;
           

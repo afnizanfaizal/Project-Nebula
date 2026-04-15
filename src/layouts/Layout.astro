@@ -70,12 +70,11 @@ const ogImage = new URL(image, siteBase).toString();
 
     <!-- Prevent flash of unstyled theme -->
     <script is:inline>
-      const theme = localStorage.getItem('theme') ??
-        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      const theme = localStorage.getItem('theme') ?? 'dark';
       document.documentElement.classList.toggle('dark', theme === 'dark');
     </script>
   </head>
-  <body class="bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 min-h-screen flex flex-col font-sans">
+  <body class="bg-white dark:bg-[#050508] text-zinc-900 dark:text-zinc-100 min-h-screen flex flex-col font-sans transition-colors duration-300">
     <Navbar />
     <main class="flex-1">
       <slot />
