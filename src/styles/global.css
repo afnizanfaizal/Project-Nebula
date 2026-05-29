@@ -23,6 +23,11 @@
     --font-mono: 'Geist Mono', monospace;
   }
 
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
   html {
     font-feature-settings: 'cv11', 'ss01', 'liga';
     -webkit-font-smoothing: antialiased;
