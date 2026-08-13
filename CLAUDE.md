@@ -74,6 +74,6 @@ The `FIREBASE_PRIVATE_KEY` value contains literal `\n` sequences; `firebase-admi
 
 ## Key Constraints
 
-- `firebase-admin` is CJS and must stay in `vite.ssr.external`; all `@firebase/*` client packages must stay in `vite.ssr.noExternal`.
+- `firebase-admin` is CJS and must stay in `vite.ssr.external`; all `@firebase/*` client packages, plus `@mdxeditor/*`, `@lexical/*`, `@codemirror/*`, and `codemirror` (the MDX editor's deps), must stay in `vite.ssr.noExternal`.
 - The `patchBrokenTransforms` Vite plugin in `astro.config.mjs` works around a Vite 7 crash with invalid plugin hooks — don't remove it.
 - `export const prerender = false` is required on any page that reads from Firestore (even if it seems like it would default to server rendering).

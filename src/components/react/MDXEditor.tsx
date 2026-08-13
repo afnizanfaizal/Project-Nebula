@@ -249,7 +249,7 @@ const StatEditor = ({ mdastNode }: JsxEditorProps) => {
       />
       <textarea
         value={attributes.label || ''}
-        onChange={(e) => updateAttr('label', e.target.value)}
+        onChange={(e) => updateAttr('label', e.target.value.replace(/\s*\n\s*/g, ' '))}
         placeholder="Label description..."
         rows={2}
         className="bg-transparent text-xs text-zinc-400 placeholder:text-zinc-700 outline-none resize-none leading-snug relative z-10"
@@ -326,7 +326,7 @@ const StatsGridEditor = ({ mdastNode }: JsxEditorProps) => {
             />
             <textarea
               value={stat.label || ''}
-              onChange={(e) => updateStat(index, 'label', e.target.value)}
+              onChange={(e) => updateStat(index, 'label', e.target.value.replace(/\s*\n\s*/g, ' '))}
               placeholder="Label description..."
               rows={2}
               className="bg-transparent text-xs text-zinc-400 placeholder:text-zinc-700 outline-none resize-none leading-snug"
