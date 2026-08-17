@@ -124,6 +124,10 @@ async function parseUploadResponse(res: Response): Promise<{ url?: string; error
   }
 }
 
+// Mirrors the server's cap (upload-image.ts) — Netlify Functions hard-limit
+// request bodies to 6 MB, so reject oversized files before the round-trip.
+const MAX_UPLOAD_SIZE = 4 * 1024 * 1024;
+
 /** Custom Interactive Editor for the <youtube /> component */
 const YouTubeEditor = ({ mdastNode }: JsxEditorProps) => {
   const updateMdastNode = useMdastNodeUpdater();
@@ -653,6 +657,10 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
   };
 
   const handleFeaturedImageUpload = async (file: File) => {
+    if (file.size > MAX_UPLOAD_SIZE) {
+      showUploadError('Image upload failed: File too large (max 4 MB)');
+      return;
+    }
     setImgUploading(true);
     try {
       const form = new FormData();
@@ -743,6 +751,10 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
 
   // Upload media and insert it into the editor.
   const handleImageFile = async (file: File) => {
+    if (file.size > MAX_UPLOAD_SIZE) {
+      showUploadError('Media upload failed: File too large (max 4 MB)');
+      return;
+    }
     setImgUploading(true);
     try {
       const form = new FormData();

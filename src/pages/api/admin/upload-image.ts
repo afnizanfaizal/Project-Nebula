@@ -3,8 +3,11 @@ import { extname } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { adminStorage } from '../../../lib/firebase-admin';
 
-// 10 MB hard cap – prevents large uploads from exhausting server memory
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+// Netlify Functions hard-cap request bodies at 6 MB, and multipart/form-data
+// gets base64-encoded crossing the Lambda-compatible proxy (~33% inflation),
+// so the raw file has to stay well under that. 4 MB leaves enough margin that
+// a request never gets rejected by the platform before reaching this handler.
+const MAX_FILE_SIZE = 4 * 1024 * 1024;
 
 // SVG is intentionally excluded: SVG files can embed <script> tags and
 // execute JavaScript in the browser when served from the same origin (XSS).
@@ -23,7 +26,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      return new Response(JSON.stringify({ error: 'File too large (max 10 MB)' }), {
+      return new Response(JSON.stringify({ error: 'File too large (max 4 MB)' }), {
         status: 413,
         headers: { 'Content-Type': 'application/json' },
       });

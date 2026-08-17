@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest';
 
 // ── Constants mirrored from upload-image.ts ──────────────────────────────────
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4 MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
 // ── Helper: make a fake File-like object ─────────────────────────────────────
@@ -15,12 +15,12 @@ function makeFile(type: string, sizeBytes: number): { type: string; size: number
 }
 
 describe('upload-image: file size validation', () => {
-  it('accepts a file exactly at the 5 MB limit', () => {
+  it('accepts a file exactly at the 4 MB limit', () => {
     const file = makeFile('image/jpeg', MAX_FILE_SIZE);
     expect(file.size > MAX_FILE_SIZE).toBe(false);
   });
 
-  it('rejects a file 1 byte over the 5 MB limit', () => {
+  it('rejects a file 1 byte over the 4 MB limit', () => {
     const file = makeFile('image/jpeg', MAX_FILE_SIZE + 1);
     expect(file.size > MAX_FILE_SIZE).toBe(true);
   });

@@ -64,6 +64,8 @@ View tracking happens in two places:
 
 Images upload to Firebase Storage and are proxied through `/uploads/[...path].ts` (which streams from Storage), since the Storage bucket is not publicly accessible.
 
+Upload size is capped at 4 MB (`upload-image.ts`, mirrored client-side in `MediaLibrary.tsx` / `MDXEditor.tsx`) because Netlify Functions hard-limit synchronous request bodies to 6 MB and multipart bodies get base64-encoded crossing the Lambda-compatible proxy (~33% inflation) — don't raise this cap without also moving uploads off the Functions path (e.g. direct-to-Storage signed URLs).
+
 ## Environment Variables
 
 Required env vars — see `.env.example` for the full list with descriptions:

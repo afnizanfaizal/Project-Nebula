@@ -7,6 +7,8 @@ export interface ImageMetadata {
   mtime: number;
 }
 
+const MAX_UPLOAD_SIZE = 4 * 1024 * 1024;
+
 const Icon = {
   Plus: (p: { className?: string }) => (
     <svg className={p.className ?? 'w-4 h-4'} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
@@ -107,6 +109,14 @@ export default function MediaLibrary({ onSelect, variant = 'manage' }: MediaLibr
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Mirrors the server's cap (upload-image.ts) — Netlify Functions hard-limit
+    // request bodies to 6 MB, so reject oversized files before the round-trip.
+    if (file.size > MAX_UPLOAD_SIZE) {
+      showToast('File too large (max 4 MB)');
+      e.target.value = '';
+      return;
+    }
 
     setUploading(true);
     const formData = new FormData();
