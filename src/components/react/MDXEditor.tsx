@@ -109,6 +109,21 @@ function getYouTubeId(url: string): string | null {
   return match ? match[1] : null;
 }
 
+/**
+ * Upload endpoints normally return JSON, but platform-level failures (payload
+ * too large, gateway timeouts, auth redirects) can return HTML/plain text
+ * instead — parse defensively so those show a real message, not a JSON
+ * SyntaxError.
+ */
+async function parseUploadResponse(res: Response): Promise<{ url?: string; error?: string }> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: `Server error (${res.status}): ${text.slice(0, 200) || res.statusText}` };
+  }
+}
+
 /** Custom Interactive Editor for the <youtube /> component */
 const YouTubeEditor = ({ mdastNode }: JsxEditorProps) => {
   const updateMdastNode = useMdastNodeUpdater();
@@ -643,7 +658,7 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
       const form = new FormData();
       form.append('image', file);
       const res = await fetch('/api/admin/upload-image', { method: 'POST', body: form });
-      const data = await res.json() as { url?: string; error?: string };
+      const data = await parseUploadResponse(res);
       if (!res.ok || !data.url) throw new Error(data.error ?? 'Upload failed');
       setMeta(m => ({ ...m, featuredImage: data.url! }));
     } catch (err) {
@@ -733,7 +748,7 @@ export default function BlogEditor({ slug: initialSlug = '' }: Props) {
       const form = new FormData();
       form.append('image', file);
       const res = await fetch('/api/admin/upload-image', { method: 'POST', body: form });
-      const data = await res.json() as { url?: string; error?: string };
+      const data = await parseUploadResponse(res);
       if (!res.ok || !data.url) throw new Error(data.error ?? 'Upload failed');
 
       const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');

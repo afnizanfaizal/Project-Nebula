@@ -11,44 +11,44 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
 
 export const POST: APIRoute = async ({ request }) => {
-  const formData = await request.formData();
-  const file = formData.get('image');
-
-  if (!(file instanceof File) || file.size === 0) {
-    return new Response(JSON.stringify({ error: 'No image provided' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  if (file.size > MAX_FILE_SIZE) {
-    return new Response(JSON.stringify({ error: 'File too large (max 10 MB)' }), {
-      status: 413,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return new Response(JSON.stringify({ error: 'Invalid file type. Allowed: JPEG, PNG, GIF, WebP, PDF' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  const ext = extname(file.name) || '.jpg';
-  const originalBaseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-  
-  // Sanitize the base name to be URL-safe
-  const safeBaseName = originalBaseName
-    .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-_]/g, '');
-    
-  // Fallback to random if the filename was entirely special characters
-  const finalBaseName = safeBaseName || randomBytes(4).toString('hex');
-  const name = `${finalBaseName}${ext}`;
-
   try {
+    const formData = await request.formData();
+    const file = formData.get('image');
+
+    if (!(file instanceof File) || file.size === 0) {
+      return new Response(JSON.stringify({ error: 'No image provided' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      return new Response(JSON.stringify({ error: 'File too large (max 10 MB)' }), {
+        status: 413,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return new Response(JSON.stringify({ error: 'Invalid file type. Allowed: JPEG, PNG, GIF, WebP, PDF' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const ext = extname(file.name) || '.jpg';
+    const originalBaseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+
+    // Sanitize the base name to be URL-safe
+    const safeBaseName = originalBaseName
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-_]/g, '');
+
+    // Fallback to random if the filename was entirely special characters
+    const finalBaseName = safeBaseName || randomBytes(4).toString('hex');
+    const name = `${finalBaseName}${ext}`;
+
     const bucket = adminStorage.bucket();
     const blob = bucket.file(`uploads/${name}`);
     const buffer = Buffer.from(await file.arrayBuffer());
